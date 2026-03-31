@@ -1,0 +1,73 @@
+#' @importFrom Rcpp evalCpp
+#' @useDynLib emplikDTA, .registration = TRUE
+
+#' @export
+vus <- function(x, y, z, type = c("Ustat", "ties")){
+  type <- match.arg(type)
+  if (any(is.na(x)) | any(is.na(y)) | any(is.na(z))) return(NA)
+  else {
+    res <- switch(type,
+                  Ustat = vusC_U(x, y, z),
+                  ties = vusC_ties(x, y, z))
+    return(res)
+  }
+}
+
+
+
+# Statistical inference for VUS ----
+#' @title Statistical inference for VUS Empirical Likelihood Ratio.
+#'
+#' @description \code{clus_roc_surface} estimates and makes a 3D plot of a covariate-specific ROC surface for a continuous diagnostic test, in a clustered design, with three ordinal groups.
+#'
+#' @param out_clus_lme  an object of class "clus_lme", a result of \code{\link{clus_lme}} call.
+#' @param newdata  a data frame with 1 row (containing specific value(s) of covariate(s)) in which to look for variables with which to estimate covariate-specific ROC. In absence of covariate, no values have to be specified.
+#' @param step_tcf  number: increment to be used in the grid for \eqn{p1 = tcf1} and \eqn{p3 = tcf3}.
+#' @param main  the main title for plot.
+#' @param file_name  	File name to create on disk.
+#' @param ellips  a logical value. If set to \code{TRUE}, the function adds an ellipsoidal confidence region for TCFs (True Class Fractions), at a specified pair of values for the thresholds, to the plot of estimated covariate-specific ROC surface.
+#' @param thresholds  a specified pair of thresholds, used to construct the ellipsoidal confidence region for TCFs.
+#' @param ci_level  a confidence level to be used for constructing the ellipsoidal confidence region; default is 0.95.
+#'
+#' @details
+#' This function implements a method in To et al. (2022) for estimating covariate-specific ROC surface of a continuous diagnostic test in a clustered design, with three ordinal groups. The estimator is based on the results from \code{\link{clus_lme}} with REML approach.
+#'
+#' Before performing estimation, a check for the monotone ordering assumption is performed. This means that, for the fixed values of covariates, three predicted mean values for test results in three diagnostic groups are compared. If the assumption is not meet, the covariate-specific ROC surface at the values of covariates is not estimated.
+#'
+#' The ellipsoidal confidence region for TCFs at a given pair of thresholds, if required, is constructed by using normal approximation and is plotted in the ROC surface space. The confidence level (default) is 0.95. Note that, if the Box-Cox transformation is applied for the linear mixed-effect model, the pair of thresholds must be input in the original scale. If the constructed confidence region for TCFs is outside the unit cube, a probit transformation will be automatically applied to obtain an appropriate confidence region, which is inside the unit cube (see Bantis et. al., 2017).
+#'
+#' @return \code{clus_roc_surface} returns a 3D \code{rgl} plot of the estimated covariate-specific ROC surface.
+#'
+#' @references
+#' Bantis, L. E., Nakas, C. T., Reiser, B., Myall, D., and Dalrymple-Alford, J. C. (2017).
+#' ``Construction of joint confidence regions for the optimal true class fractions of Receiver Operating Characteristic (ROC) surfaces and manifolds''. \emph{Statistical methods in medical research}, \bold{26}, 3, 1429-1442.
+#'
+#' To, D-K., Adimari, G., Chiogna, M. and Risso, D. (2022)
+#' ``Receiver operating characteristic estimation and threshold selection criteria in three-class classification problems for clustered data''. \emph{Statistical Methods in Medical Research}, \bold{7}, 31, 1325-1341.
+#'
+#' @examples
+#' \donttest{
+#' data(data_3class)
+#' ## One covariate
+#' out1 <- clus_lme(fixed_formula = Y ~ X1, name_class = "D",
+#'                  name_clust = "id_Clus", data = data_3class)
+#'
+#' ### plot only covariate-specific ROC surface
+#' clus_roc_surface(out_clus_lme = out1, newdata = data.frame(X1 = 1))
+#'
+#' ### plot covariate-specific ROC surface and a 95% ellipsoidal confidence region for TCFs
+#' clus_roc_surface(out_clus_lme = out1, newdata = data.frame(X1 = 1),
+#'                  ellips = TRUE, thresholds = c(0.9, 3.95))
+#'
+#' ## Two covariates
+#' out2 <- clus_lme(fixed_formula = Y ~ X1 + X2, name_class = "D",
+#'                  name_clust = "id_Clus", data = data_3class)
+#'
+#' ### plot only covariate-specific ROC surface
+#' clus_roc_surface(out_clus_lme = out2, newdata = data.frame(X1 = 1, X2 = 1))
+#'
+#' ### plot covariate-specific ROC surface and a 95% ellipsoidal confidence region for TCFs
+#' clus_roc_surface(out_clus_lme = out2, newdata = data.frame(X1 = 1, X2 = 1),
+#'                  ellips = TRUE, thresholds = c(0.9, 3.95))
+#' }
+#'

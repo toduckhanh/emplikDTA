@@ -1,0 +1,22 @@
+Package: emplikDTA
+Type: Package
+Title: Empirical Likelihood Inference for Diagnostic Test Accuracy
+Version: 0.1.0
+Date: 2026-02-14
+Authors@R: 
+    person(given = "Duc-Khanh",
+           family = "To",
+           role = c("aut", "cre"),
+           email = "tdkhanh@hcmus.edu.vn",
+           comment = c(ORCID = "0000-0002-4641-0764"))
+Description: This package provides some functions for performing statistical inference for the ROC curve analysis, and the ROC surface analysis.
+License: GPL (>= 2)
+Depends: R (>= 3.5.0), stats, utils, graphics, rgl, misc3d
+Imports: Rcpp (>= 1.1.1)
+LinkingTo: Rcpp
+Encoding: UTF-8
+LazyData: true
+LazyLoad: yes
+ByteCompile: yes
+RoxygenNote: 7.3.3
+NeedsCompilation: yes

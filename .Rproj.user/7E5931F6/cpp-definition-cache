@@ -1,0 +1,126 @@
+[
+    {
+        "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/auc_est_C.cpp",
+        "file_last_write": 1748692027.0,
+        "definitions": [
+            {
+                "usr": "c:auc_est_C.cpp@F@ind_auc#d#d#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "ind_auc(double, double)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/auc_est_C.cpp",
+                "line": 4,
+                "column": 22,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@auc_U_C#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "auc_U_C(Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/auc_est_C.cpp",
+                "line": 10,
+                "column": 8,
+                "hidden": false
+            },
+            {
+                "usr": "c:auc_est_C.cpp@F@ind_auc_ties#d#d#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "ind_auc_ties(double, double)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/auc_est_C.cpp",
+                "line": 22,
+                "column": 22,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@auc_ties_C#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "auc_ties_C(Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/auc_est_C.cpp",
+                "line": 32,
+                "column": 8,
+                "hidden": false
+            }
+        ],
+        "hidden": false
+    },
+    {
+        "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+        "file_last_write": 1677755580.0,
+        "definitions": [
+            {
+                "usr": "c:empVUS.cpp@F@indvus#d#d#d#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "indvus(double, double, double)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 4,
+                "column": 22,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@vusC_U#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "vusC_U(Rcpp::NumericVector, Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 10,
+                "column": 8,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@vusC_varEL#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "vusC_varEL(Rcpp::NumericVector, Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 25,
+                "column": 15,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@vusC_full_core#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "vusC_full_core(Rcpp::NumericVector, Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 71,
+                "column": 6,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@place_U#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "place_U(Rcpp::NumericVector, Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 98,
+                "column": 15,
+                "hidden": false
+            },
+            {
+                "usr": "c:empVUS.cpp@F@indvus_ties#d#d#d#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "indvus_ties(double, double, double)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 112,
+                "column": 22,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@vusC_ties#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "vusC_ties(Rcpp::NumericVector, Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "C:/Users/duckh/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 123,
+                "column": 8,
+                "hidden": false
+            }
+        ],
+        "hidden": false
+    }
+]
