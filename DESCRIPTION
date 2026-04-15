@@ -11,7 +11,7 @@ Authors@R:
            comment = c(ORCID = "0000-0002-4641-0764"))
 Description: This package provides some functions for performing statistical inference for the ROC curve analysis, and the ROC surface analysis.
 License: GPL (>= 2)
-Depends: R (>= 3.5.0), stats, utils, graphics, rgl, misc3d
+Depends: R (>= 3.5.0), stats, utils, graphics, rgl, misc3d, ggplot2
 Imports: Rcpp (>= 1.1.1)
 LinkingTo: Rcpp
 Encoding: UTF-8
