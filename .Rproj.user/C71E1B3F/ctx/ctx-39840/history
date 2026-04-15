@@ -1,0 +1,8 @@
+install.packages(c("cli", "emmeans", "FactoMineR", "ggsci", "insight", "pak", "purrr", "QuickJSR", "rlang", "V8", "vctrs"))
+devtools::install_github("IMNMV/ClaudeR")
+library(ClaudeR)
+install_clauder()          # For Claude Desktop / Cursor
+library(ClaudeR)
+install_clauder()          # For Claude Desktop / Cursor
+install_clauder()          # For Claude Desktop / Cursor
+install_clauder()          # For Claude Desktop / Cursor

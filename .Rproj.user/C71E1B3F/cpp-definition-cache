@@ -1,0 +1,56 @@
+[
+    {
+        "file": "D:/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empAUC.cpp",
+        "file_last_write": 1774940285.0,
+        "definitions": [
+            {
+                "usr": "c:empAUC.cpp@F@ind_auc_ties#d#d#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "ind_auc_ties(double, double)",
+                "file": "D:/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empAUC.cpp",
+                "line": 5,
+                "column": 22,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@aucC_ties#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "aucC_ties(Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "D:/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empAUC.cpp",
+                "line": 15,
+                "column": 8,
+                "hidden": false
+            }
+        ],
+        "hidden": false
+    },
+    {
+        "file": "D:/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+        "file_last_write": 1774941497.0,
+        "definitions": [
+            {
+                "usr": "c:empVUS.cpp@F@ind_vus_ties#d#d#d#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "ind_vus_ties(double, double, double)",
+                "file": "D:/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 5,
+                "column": 22,
+                "hidden": false
+            },
+            {
+                "usr": "c:@F@vusC_ties#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#S0_#S0_#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "vusC_ties(Rcpp::NumericVector, Rcpp::NumericVector, Rcpp::NumericVector)",
+                "file": "D:/Dropbox/research_project_HCMUS/De_tai_DHQG_C/research/package/emplikDTA/src/empVUS.cpp",
+                "line": 16,
+                "column": 8,
+                "hidden": false
+            }
+        ],
+        "hidden": false
+    }
+]
