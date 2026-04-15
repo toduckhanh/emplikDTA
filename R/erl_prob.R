@@ -7,3 +7,14 @@ ll_prob <- function(theta, theta_est, n) {
   }
   return(res)
 }
+
+# adjusted likelihood ratio function 
+ll_prob_adj <- function(theta, theta_est, r_adj, qc, n) {
+  ll_est <- ll_prob(theta, theta_est, n)
+  if (is.na(ll_est)) ll_est <- Inf
+  ll_est_adj <- ll_est
+  if (!is.infinite(ll_est)){
+    ll_est_adj <- r_adj * ll_est_adj
+  }
+  return(ll_est_adj - qc)
+}

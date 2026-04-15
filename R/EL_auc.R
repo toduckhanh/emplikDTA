@@ -1,32 +1,29 @@
-#' @import ggplot2
-
 # bootstrap procedure for EL vus ----
-bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
+bts_auc <- function(X1, X2, n1, n2, n, auc_est, B) {
   empi_bts <- sapply(1:B, function(i){
     flag <- 0
     while(flag == 0){
       X1.b <- sample(X1, n1, replace = TRUE)
       X2.b <- sample(X2, n2, replace = TRUE)
-      X3.b <- sample(X3, n3, replace = TRUE)
-      flag <- as.numeric((mean(X1.b) < mean(X2.b)) * (mean(X2.b) < mean(X3.b)))
+      flag <- as.numeric(mean(X1.b) < mean(X2.b))
     }
-    vus_est_bts <- vus_core(X1.b, X2.b, X3.b)
-    if (vus_est_bts == 1) {
-      vus_est_bts <- vus_est_bts/(1 + 0.5 / n1 / n2 / n3)
+    auc_est_bts <- auc_core(X1.b, X2.b)
+    if (auc_est_bts == 1) {
+      auc_est_bts <- auc_est_bts/(1 + 0.5 / n1 / n2)
     }
-    res <- ll_prob(theta = vus_est, theta_est = vus_est_bts, n = n)
+    res <- ll_prob(theta = auc_est, theta_est = auc_est_bts, n = n)
     return(res)
   })
   return(empi_bts)
 }
 
 # function for plotting the likelihood ratio and confidence interval
-.plot_vus <- function(vus_est, r_est, ci_level, n, ci) {
+.plot_auc <- function(auc_est, r_est, ci_level, n, ci) {
   xgrid <- seq(0, 1, by = 0.001)
   ll <- sapply(xgrid, function(x) {
     ll_prob_adj(
       x,
-      theta_est = vus_est,
+      theta_est = auc_est,
       r_adj = r_est,
       qc = qchisq(ci_level, 1),
       n = n
@@ -47,7 +44,7 @@ bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
     ) +
     geom_vline(xintercept = ci, linetype = "dashed") +
     geom_vline(
-      xintercept = vus_est,
+      xintercept = auc_est,
       color = "blue",
       linewidth = 0.75
     ) +
@@ -56,16 +53,16 @@ bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
       linetype = "dotted"
     ) +
     labs(
-      x = "VUS",
+      x = "AUC",
       y = "Empirical likelihood ratio"
     ) +
     theme_bw()
   return(p)
 }
 
-# Empirical Likelihood Inference for vus ----
-#' Volume Under Surface (VUS) estimation and Empirical Likelihood Inference for VUS
-#' @param x,y,z Numeric vectors (default method)
+# Empirical Likelihood Inference for auc ----
+#' Area Under ROC surface (AUC) estimation and Empirical Likelihood Inference for AUC
+#' @param x,y Numeric vectors (default method)
 #' @param formula A formula of the form y ~ group
 #' @param data Data frame
 #' @param theta0 Null hypothesis value
@@ -74,66 +71,63 @@ bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
 #' @param seed Random seed
 #' @param plot Logical; plot empirical likelihood
 #' @export
-vus <- function(x, ...) {
-  UseMethod("vus")
+auc <- function(x, ...) {
+  UseMethod("auc")
 }
 
 #' @exportS3Method
-vus.default <- function(x, y, z, vus0 = 1/6, ci_level = 0.95, B = 500, seed,
+auc.default <- function(x, y, auc0 = 1/2, ci_level = 0.95, B = 500, seed,
                         plot = FALSE) {
   call <- match.call()
   .check_numeric(x, "x")
   .check_numeric(y, "y")
-  .check_numeric(z, "z")
   .check_ci(ci_level)
   m1 <- mean(x)
   m2 <- mean(y)
-  m3 <- mean(z)
-  if (m1 > m2 || m2 > m3) warning("the orders of groups may not hold")
+  if (m1 > m2) warning("the orders of groups may not hold")
   n1 <- length(x)
   n2 <- length(y)
-  n3 <- length(z)
-  n  <- n1 + n2 + n3
-  vus_est <- vus_core(x, y, z)
+  n  <- n1 + n2
+  auc_est <- auc_core(x, y)
   out <- list(
-    estimate = vus_est,
-    n = c(n1 = n1, n2 = n2, n3 = n3),
+    estimate = auc_est,
+    n = c(n1 = n1, n2 = n2),
     call = call
   )
-  if (vus_est == 1) {
-    out$estimate <- vus_est / (1 + 0.5 / n1 / n2 / n3)
-    class(out) <- "vus"
+  if (auc_est == 1) {
+    out$estimate <- auc_est / (1 + 0.5 / n1 / n2)
+    class(out) <- "auc"
     return(out)
   }
   if (missing(seed)) seed <- 34
   set.seed(seed)
-  r_bts <- bts_vus(X1 = x, X2 = y, X3 = z, n1 = n1, n2 = n2, n3 = n3, 
-                   n = n, vus_est = vus_est, B = B)
+  r_bts <- bts_auc(X1 = x, X2 = y, n1 = n1, n2 = n2, n = n, auc_est = auc_est,
+                   B = B)
   r_est <- qchisq(0.5, 1) / median(r_bts)
   qc <- qchisq(ci_level, 1)
-  LI <- uniroot(f = ll_prob_adj, interval = c(0, vus_est), 
-                theta_est = vus_est, qc = qc, r_adj = r_est, n = n)$root
-  UI <- uniroot(f = ll_prob_adj, interval = c(vus_est, 1), 
-                theta_est = vus_est, qc = qc, r_adj = r_est, n = n)$root
+  LI <- uniroot(f = ll_prob_adj, interval = c(0, auc_est), 
+                theta_est = auc_est, qc = qc, r_adj = r_est, n = n)$root
+  UI <- uniroot(f = ll_prob_adj, interval = c(auc_est, 1), 
+                theta_est = auc_est, qc = qc, r_adj = r_est, n = n)$root
   ci <- c(LI, UI)
   if (plot) {
-    pl <- .plot_vus(vus_est, r_est, ci_level, n, ci)
+    pl <- .plot_auc(auc_est, r_est, ci_level, n, ci)
     print(pl)
   }
   ## p-value
-  ll_0 <- ll_prob(theta = vus0, theta_est = vus_est, n = n)
+  ll_0 <- ll_prob(theta = auc0, theta_est = auc_est, n = n)
   p_val <- pchisq(r_est * ll_0, df = 1, lower.tail = FALSE)
   ##
   out$conf.int <- ci
   out$p.value <- p_val
   out$r.adj <- r_est
   out$ci_level <- ci_level
-  class(out) <- "vus"
+  class(out) <- "auc"
   return(out)
 }
 
 #' @exportS3Method
-vus.formula <- function(formula, data, diag_levels = NULL, subset, 
+auc.formula <- function(formula, data, diag_levels = NULL, subset, 
                         na.action, ...) {
   call <- match.call()
   if (missing(data)) {
@@ -149,18 +143,17 @@ vus.formula <- function(formula, data, diag_levels = NULL, subset,
   if (!is.factor(group)) {
     group <- factor(group)
   }
-  if (nlevels(group) != 3) {
-    stop("diagnostic group must have exactly 3 levels", call. = FALSE)
+  if (nlevels(group) != 2) {
+    stop("diagnostic group must have exactly 2 levels", call. = FALSE)
   }
   mean_temp <- aggregate(formula, FUN = mean, data = data)
   temp_levl <- mean_temp[order(mean_temp[, 2]), 1]
-  out_check_levl <- .check_levl_class(trace = TRUE, diag_levels, temp_levl, 
-                                      n_class = 3)
+  out_check_levl <- .check_levl_class(trace = TRUE, diag_levels, temp_levl,
+                                      n_class = 2)
   levl_class <- out_check_levl$levl_class
   x <- response[group == levl_class[1]]
   y <- response[group == levl_class[2]]
-  z <- response[group == levl_class[3]]
-  res <- vus.default(x, y, z, ...)
+  res <- auc.default(x, y, ...)
   res$formula <- formula
   res$group.levels <- levl_class
   res$call <- call
@@ -168,8 +161,8 @@ vus.formula <- function(formula, data, diag_levels = NULL, subset,
 }
 
 #' @export
-print.vus <- function(x, ...) {
-  cat("VUS estimate:\n")
+print.auc <- function(x, ...) {
+  cat("AUC estimate:\n")
   print(x$estimate)
   if (!is.null(x$conf.int)) {
     cat(paste0("\n", x$ci_level * 100, "% Confidence interval:\n"))
@@ -182,13 +175,13 @@ print.vus <- function(x, ...) {
 }
 
 #' @export
-summary.vus <- function(object, ...) {
+summary.auc <- function(object, ...) {
   out <- list(
     estimate = object$estimate,
     conf.int = object$conf.int,
     p.value = object$p.value,
     n = object$n
   )
-  class(out) <- "summary.vus"
+  class(out) <- "summary.auc"
   out
 }
