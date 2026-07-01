@@ -20,8 +20,8 @@ bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
   return(empi_bts)
 }
 
-# function for plotting the likelihood ratio and confidence interval
-.plot_vus <- function(vus_est, r_est, ci_level, n, ci) {
+# function for plotting the likelihood ratio and confidence interval ----
+plot_vus <- function(vus_est, r_est, ci_level, n, ci) {
   xgrid <- seq(0, 1, by = 0.001)
   ll <- sapply(xgrid, function(x) {
     ll_prob_adj(
@@ -64,20 +64,57 @@ bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
 }
 
 # Empirical Likelihood Inference for vus ----
-#' Volume Under Surface (VUS) estimation and Empirical Likelihood Inference for VUS
-#' @param x,y,z Numeric vectors (default method)
-#' @param formula A formula of the form y ~ group
-#' @param data Data frame
-#' @param theta0 Null hypothesis value
-#' @param ci_level Confidence level
-#' @param B Bootstrap size
-#' @param seed Random seed
-#' @param plot Logical; plot empirical likelihood
+#' @name vus
+#' 
+#' @title Volume Under Surface (VUS) estimation and Empirical Likelihood Inference for VUS
+#' @aliases vus
+#' @aliases vus.default
+#' @aliases vus.formula
+#' @description This function estimates the VUS of a continuous diagnostic test (biomarker) 
+#' in three-class setting, together with a confidence interval.
+#' 
+#' 
+#' @details ....
+#' 
+#' 
+#' @return \code{vus} returns an object of class "vus" which is a list containing at least the following components:
+#'
+#' \item{call}{the matched call.}
+#' \item{estimate}{the estimated VUS.}
+#' \item{conf.int}{a confidence interval for the VUS.}
+#' \item{p.value}{the p-value for the test.}
+#' \item{r.adj}{the value of adjusted pamarameter.}
+#' \item{ci_level}{confidence level of the interval.}
+#'
+#' Generic functions such as \code{print} is also used to show the results.
+#' 
+#' 
+#' 
+#' 
+#' @references
+#' To, D. K., Adimari, G., & Chiogna, M. (2024). 
+#' Interval estimation in three-class receiver operating characteristic analysis: 
+#' A fairly general approach based on the empirical likelihood. 
+#' \emph{Statistical Methods in Medical Research}, \bold{33}, 5, 875-893.
+#' 
+#' 
+#' 
 #' @export
 vus <- function(x, ...) {
   UseMethod("vus")
 }
 
+#' @rdname vus
+#' @param x,y,z numeric vectors (default method) contains values of diagnostic tests (biomarkers)
+#' corresponding to the first, second and third class of disease. The ordering is intended 
+#' to be ``increasing'' with respect to the disease severity.
+#' @param vus0 a number indicating the true value of the VUS.
+#' @param ci_level a confidence level to be used for constructing the confidence interval; 
+#' default is 0.95.
+#' @param B the number of bootstrap replicates
+#' @param seed the value of \code{.Random.seed} when bootstrap started work.
+#' @param plot a logical indicating whether you want to plot empirical likelihood ratio
+#' and confidence interval for VUS.
 #' @exportS3Method
 vus.default <- function(x, y, z, vus0 = 1/6, ci_level = 0.95, B = 500, seed,
                         plot = FALSE) {
@@ -117,7 +154,7 @@ vus.default <- function(x, y, z, vus0 = 1/6, ci_level = 0.95, B = 500, seed,
                 theta_est = vus_est, qc = qc, r_adj = r_est, n = n)$root
   ci <- c(LI, UI)
   if (plot) {
-    pl <- .plot_vus(vus_est, r_est, ci_level, n, ci)
+    pl <- plot_vus(vus_est, r_est, ci_level, n, ci)
     print(pl)
   }
   ## p-value
@@ -132,6 +169,25 @@ vus.default <- function(x, y, z, vus0 = 1/6, ci_level = 0.95, B = 500, seed,
   return(out)
 }
 
+#' @rdname vus
+#' @param formula an object of class "\code{\link[stats]{formula}}" (or one that can be coerced 
+#' to that class): a symbolic description of the model to be fitted. 
+#' The details of model specification are given under ‘Details’.
+#' @param data a data frame containing the variables in the formula.
+#' @param diag_levels a vector (of strings) containing the ordered name chosen for 
+#' the disease classes. The ordering is intended to be ``increasing'' with respect to the 
+#' disease severity. If \code{diag_levels = NULL} (default), the elements of the vector 
+#' will be automatically determined from data, by considering the order of the means 
+#' of the test values for each disease class (diagnostic group).
+#' @param subset an optional expression indicating the subset of the rows of data 
+#' that should be used in the fit. This can be a logical vector, or a numeric vector
+#' indicating which observation numbers are to be included, or a character vector of 
+#' the row names to be included. All observations are included by default.
+#' @param na.action a function which indicates what should happen when the data contain \code{NA}s. 
+#' The default is set by the \code{na.action} setting of \code{\link[base]{options}}, and is 
+#' \code{\link[stats]{na.fail}} if that is unset. The ‘factory-fresh’ default is 
+#' \code{\link[stats]{na.omit}}. Another possible value is \code{NULL}, no action. 
+#' Value \code{\link[stats]{na.exclude}} can be useful.
 #' @exportS3Method
 vus.formula <- function(formula, data, diag_levels = NULL, subset, 
                         na.action, ...) {
@@ -181,14 +237,3 @@ print.vus <- function(x, ...) {
   invisible(x)
 }
 
-#' @export
-summary.vus <- function(object, ...) {
-  out <- list(
-    estimate = object$estimate,
-    conf.int = object$conf.int,
-    p.value = object$p.value,
-    n = object$n
-  )
-  class(out) <- "summary.vus"
-  out
-}

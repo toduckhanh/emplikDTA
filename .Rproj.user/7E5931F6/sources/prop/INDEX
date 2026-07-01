@@ -3,6 +3,7 @@ C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresear
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2FNAMESPACE="44F6DC11"
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2FR%2FEL_3classes.R="1C57E87C"
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2FR%2FEL_3classes_proj.R="617670F1"
+C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2FR%2FEL_auc.R="CC35D53A"
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2FR%2FEL_vus.R="986739E5"
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2FR%2FROC_emp_surface.R="4C232014"
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2FR%2Fauc_est.R="BDEE69A0"
@@ -15,4 +16,5 @@ C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresear
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2Fsrc%2FRcppExports.cpp="5D0D11CE"
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2Fsrc%2Fauc_est_C.cpp="401FAF62"
 C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2Fsrc%2FempVUS.cpp="ED187FE2"
+C%3A%2FUsers%2Fduckh%2FDropbox%2Fresearch_project_HCMUS%2FDe_tai_DHQG_C%2Fresearch%2Fpackage%2FemplikDTA%2Ftests%2Ftest_auc_1.R="21750016"
 C%3A%2FUsers%2Fduckh%2FOneDrive%2FClustered%20data%2FClusROC%2FR%2Fclus_roc_surface.R="C9A36D89"
