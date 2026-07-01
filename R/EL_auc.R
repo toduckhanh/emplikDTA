@@ -1,12 +1,12 @@
 # bootstrap procedure for EL vus ----
 bts_auc <- function(X1, X2, n1, n2, n, auc_est, B) {
   empi_bts <- sapply(1:B, function(i){
-    flag <- 0
-    while(flag == 0){
+    # flag <- 0
+    # while(flag == 0){
       X1.b <- sample(X1, n1, replace = TRUE)
       X2.b <- sample(X2, n2, replace = TRUE)
-      flag <- as.numeric(mean(X1.b) < mean(X2.b))
-    }
+      # flag <- as.numeric(mean(X1.b) < mean(X2.b))
+    # }
     auc_est_bts <- auc_core(X1.b, X2.b)
     if (auc_est_bts == 1) {
       auc_est_bts <- auc_est_bts/(1 + 0.5 / n1 / n2)
