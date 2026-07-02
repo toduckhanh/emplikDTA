@@ -3,13 +3,13 @@
 # bootstrap procedure for EL vus ----
 bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
   empi_bts <- sapply(1:B, function(i){
-    flag <- 0
-    while(flag == 0){
+    # flag <- 0
+    # while(flag == 0){
       X1.b <- sample(X1, n1, replace = TRUE)
       X2.b <- sample(X2, n2, replace = TRUE)
       X3.b <- sample(X3, n3, replace = TRUE)
-      flag <- as.numeric((mean(X1.b) < mean(X2.b)) * (mean(X2.b) < mean(X3.b)))
-    }
+    #   flag <- as.numeric((mean(X1.b) < mean(X2.b)) * (mean(X2.b) < mean(X3.b)))
+    # }
     vus_est_bts <- vus_core(X1.b, X2.b, X3.b)
     if (vus_est_bts == 1) {
       vus_est_bts <- vus_est_bts/(1 + 0.5 / n1 / n2 / n3)
