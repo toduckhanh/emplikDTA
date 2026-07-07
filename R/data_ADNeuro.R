@@ -1,0 +1,59 @@
+#' @title Alzheimer's Disease Neuropsychometric Marker Dataset
+#' @name ADNeuro
+#' @description
+#' A subset of the longitudinal cohort from the Washington University (WU)
+#' Alzheimer's Disease Research Center (ADRC). The dataset contains
+#' measurements of 14 neuropsychological markers collected from 118
+#' independent individuals aged 75 years. Individuals were classified into
+#' three diagnostic groups according to the published Clinical Dementia
+#' Rating (CDR).
+#'
+#' @format A data frame with 118 observations on 15 variables:
+#' \describe{
+#'   \item{\code{group}}{A factor with levels \eqn{D^-}, \eqn{D^0}, and
+#'   \eqn{D^+}. The \eqn{D^-} group has CDR = 0 (no dementia),
+#'   the \eqn{D^0} group has CDR = 0.5 (very mild dementia),
+#'   and the \eqn{D^+} group has CDR = 1 (Alzheimer's disease).}
+#'   \item{\code{FACTOR1}}{Global factor score.}
+#'   \item{\code{ktemp}}{Temporal factor score.}
+#'   \item{\code{kpar}}{Parietal factor score.}
+#'   \item{\code{kfront}}{Frontal factor score.}
+#'   \item{\code{zpsy004}}{Logical memory score.}
+#'   \item{\code{zpsy005}}{Digit span forward score.}
+#'   \item{\code{zpsy006}}{Digit span backward score.}
+#'   \item{\code{zinfo}}{Information score.}
+#'   \item{\code{zbentc}}{Visual retention (10 seconds) score.}
+#'   \item{\code{zbentd}}{Visual retention (copy) score.}
+#'   \item{\code{zboston}}{Boston Naming Test score.}
+#'   \item{\code{zmentcon}}{Mental control score.}
+#'   \item{\code{zworflu}}{Word fluency score.}
+#'   \item{\code{zassc}}{Associate learning score.}
+#' }
+#'
+#' @details
+#' See the references for detailed descriptions of the 14 neuropsychological
+#' markers and their scoring procedures.
+#'
+#' @source
+#' The dataset is reproduced from the \pkg{DiagTest3Grp} package
+#' (version 1.6).
+#'
+#' Originally published in:
+#' 
+#' Xiong, C., van Belle, G., Miller, J. P., & Morris, J. C. (2006).
+#' *Measuring and Estimating Diagnostic Accuracy When There Are Three
+#' Ordinal Diagnostic Groups*.
+#' Statistics in Medicine, **25**(7), 1251--1273.
+#'
+#' Sorandt, M., & Hill, R. D. (1989).
+#' *Very Mild Senile Dementia of the Alzheimer Type. II. Psychometric Test
+#' Performance*.
+#' Archives of Neurology, **46**, 383--386.
+#'
+#' @examples
+#' data(ADNeuro)
+#' str(ADNeuro)
+#' summary(ADNeuro)
+#'
+#' @keywords datasets
+NULL
