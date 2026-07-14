@@ -1,16 +1,16 @@
 #' @import ggplot2
 
 # bootstrap procedure for EL vus ----
-bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
+bts_vus <- function(x, y, z, n1, n2, n3, n, vus_est, B) {
   empi_bts <- sapply(1:B, function(i){
     # flag <- 0
     # while(flag == 0){
-      X1.b <- sample(X1, n1, replace = TRUE)
-      X2.b <- sample(X2, n2, replace = TRUE)
-      X3.b <- sample(X3, n3, replace = TRUE)
-    #   flag <- as.numeric((mean(X1.b) < mean(X2.b)) * (mean(X2.b) < mean(X3.b)))
+      x.b <- sample(x, n1, replace = TRUE)
+      y.b <- sample(y, n2, replace = TRUE)
+      y.b <- sample(z, n3, replace = TRUE)
+    #   flag <- as.numeric((mean(x.b) < mean(y.b)) * (mean(y.b) < mean(z.b)))
     # }
-    vus_est_bts <- vus_core(X1.b, X2.b, X3.b)
+    vus_est_bts <- vus_core(x.b, y.b, z.b)
     if (vus_est_bts == 1) {
       vus_est_bts <- vus_est_bts/(1 + 0.5 / n1 / n2 / n3)
     }
@@ -24,41 +24,20 @@ bts_vus <- function(X1, X2, X3, n1, n2, n3, n, vus_est, B) {
 plot_vus <- function(vus_est, r_est, ci_level, n, ci) {
   xgrid <- seq(0, 1, by = 0.001)
   ll <- sapply(xgrid, function(x) {
-    ll_prob_adj(
-      x,
-      theta_est = vus_est,
-      r_adj = r_est,
-      qc = qchisq(ci_level, 1),
-      n = n
-    ) + qchisq(ci_level, 1)
+    ll_prob_adj(x, theta_est = vus_est, r_adj = r_est, 
+                qc = qchisq(ci_level, 1), n = n) + qchisq(ci_level, 1)
   })
-  df <- data.frame(
-    vus = xgrid,
-    elr = exp(-0.5 * ll)
-  )
+  df <- data.frame(vus = xgrid, elr = exp(-0.5 * ll))
   df$inside_ci <- df$vus >= ci[1] & df$vus <= ci[2]
   cutoff <- exp(-0.5 * qchisq(ci_level, 1))
   p <- ggplot(data = df, mapping = aes(x = vus, y = elr)) +
     geom_line(linewidth = 0.75) +
-    geom_ribbon(
-      data = df[df$inside_ci, ],
-      mapping = aes(ymin = 0, ymax = elr),
-      alpha = 0.2
-    ) +
+    geom_ribbon(data = df[df$inside_ci, ], mapping = aes(ymin = 0, ymax = elr),
+                alpha = 0.2) +
     geom_vline(xintercept = ci, linetype = "dashed") +
-    geom_vline(
-      xintercept = vus_est,
-      color = "blue",
-      linewidth = 0.75
-    ) +
-    geom_hline(
-      yintercept = cutoff,
-      linetype = "dotted"
-    ) +
-    labs(
-      x = "VUS",
-      y = "Empirical likelihood ratio"
-    ) +
+    geom_vline(xintercept = vus_est, color = "blue", linewidth = 0.75) +
+    geom_hline(yintercept = cutoff, linetype = "dotted") +
+    labs(x = "VUS", y = "Empirical likelihood ratio") +
     theme_bw()
   return(p)
 }
@@ -89,14 +68,11 @@ plot_vus <- function(vus_est, r_est, ci_level, n, ci) {
 #' Generic functions such as \code{print} is also used to show the results.
 #' 
 #' 
-#' 
-#' 
 #' @references
 #' To, D. K., Adimari, G., & Chiogna, M. (2024). 
 #' Interval estimation in three-class receiver operating characteristic analysis: 
 #' A fairly general approach based on the empirical likelihood. 
 #' \emph{Statistical Methods in Medical Research}, \bold{33}, 5, 875-893.
-#' 
 #' 
 #' 
 #' @export
@@ -132,11 +108,7 @@ vus.default <- function(x, y, z, vus0 = 1/6, ci_level = 0.95, B = 500, seed,
   n3 <- length(z)
   n  <- n1 + n2 + n3
   vus_est <- vus_core(x, y, z)
-  out <- list(
-    estimate = vus_est,
-    n = c(n1 = n1, n2 = n2, n3 = n3),
-    call = call
-  )
+  out <- list(estimate = vus_est, n = c(n1 = n1, n2 = n2, n3 = n3), call = call)
   if (vus_est == 1) {
     out$estimate <- vus_est / (1 + 0.5 / n1 / n2 / n3)
     class(out) <- "vus"
@@ -144,7 +116,7 @@ vus.default <- function(x, y, z, vus0 = 1/6, ci_level = 0.95, B = 500, seed,
   }
   if (missing(seed)) seed <- 34
   set.seed(seed)
-  r_bts <- bts_vus(X1 = x, X2 = y, X3 = z, n1 = n1, n2 = n2, n3 = n3, 
+  r_bts <- bts_vus(x = x, y = y, z = z, n1 = n1, n2 = n2, n3 = n3, 
                    n = n, vus_est = vus_est, B = B)
   r_est <- qchisq(0.5, 1) / median(r_bts)
   qc <- qchisq(ci_level, 1)
@@ -163,6 +135,8 @@ vus.default <- function(x, y, z, vus0 = 1/6, ci_level = 0.95, B = 500, seed,
   ##
   out$conf.int <- ci
   out$p.value <- p_val
+  out$ll.value <- ll_0
+  out$r.bts <- r_bts
   out$r.adj <- r_est
   out$ci_level <- ci_level
   class(out) <- "vus"

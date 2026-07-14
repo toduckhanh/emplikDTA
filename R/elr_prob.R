@@ -8,7 +8,7 @@ ll_prob <- function(theta, theta_est, n) {
   return(res)
 }
 
-# adjusted likelihood ratio function 
+# adjusted likelihood ratio function ----
 ll_prob_adj <- function(theta, theta_est, r_adj, qc, n) {
   ll_est <- ll_prob(theta, theta_est, n)
   if (is.na(ll_est)) ll_est <- Inf
