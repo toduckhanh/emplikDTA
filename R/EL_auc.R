@@ -21,41 +21,20 @@ bts_auc <- function(X1, X2, n1, n2, n, auc_est, B) {
 .plot_auc <- function(auc_est, r_est, ci_level, n, ci) {
   xgrid <- seq(0, 1, by = 0.001)
   ll <- sapply(xgrid, function(x) {
-    ll_prob_adj(
-      x,
-      theta_est = auc_est,
-      r_adj = r_est,
-      qc = qchisq(ci_level, 1),
-      n = n
-    ) + qchisq(ci_level, 1)
+    ll_prob_adj(x, theta_est = auc_est, r_adj = r_est, qc = qchisq(ci_level, 1),
+                n = n) + qchisq(ci_level, 1)
   })
-  df <- data.frame(
-    vus = xgrid,
-    elr = exp(-0.5 * ll)
-  )
+  df <- data.frame(vus = xgrid, elr = exp(-0.5 * ll))
   df$inside_ci <- df$vus >= ci[1] & df$vus <= ci[2]
   cutoff <- exp(-0.5 * qchisq(ci_level, 1))
   p <- ggplot(data = df, mapping = aes(x = vus, y = elr)) +
     geom_line(linewidth = 0.75) +
-    geom_ribbon(
-      data = df[df$inside_ci, ],
-      mapping = aes(ymin = 0, ymax = elr),
-      alpha = 0.2
-    ) +
+    geom_ribbon(data = df[df$inside_ci, ], mapping = aes(ymin = 0, ymax = elr),
+                alpha = 0.2) +
     geom_vline(xintercept = ci, linetype = "dashed") +
-    geom_vline(
-      xintercept = auc_est,
-      color = "blue",
-      linewidth = 0.75
-    ) +
-    geom_hline(
-      yintercept = cutoff,
-      linetype = "dotted"
-    ) +
-    labs(
-      x = "AUC",
-      y = "Empirical likelihood ratio"
-    ) +
+    geom_vline(xintercept = auc_est, color = "blue", linewidth = 0.75) +
+    geom_hline(yintercept = cutoff, linetype = "dotted") +
+    labs(x = "AUC", y = "Empirical likelihood ratio") +
     theme_bw()
   return(p)
 }
@@ -176,12 +155,8 @@ print.auc <- function(x, ...) {
 
 #' @export
 summary.auc <- function(object, ...) {
-  out <- list(
-    estimate = object$estimate,
-    conf.int = object$conf.int,
-    p.value = object$p.value,
-    n = object$n
-  )
+  out <- list(estimate = object$estimate, conf.int = object$conf.int,
+              p.value = object$p.value, n = object$n)
   class(out) <- "summary.auc"
   out
 }

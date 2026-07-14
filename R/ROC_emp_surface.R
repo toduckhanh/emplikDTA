@@ -1,234 +1,194 @@
 ## ---- plot ROC surface and ellipse confidence region for TCFs ----
 #' @import rgl
 #' @import misc3d
-#' @export
-tcfs_emp <- function(X1, X2, X3, tau) {
-  tcf1 <- mean(X1 <= tau[1])
-  tcf2 <- mean((X2 <= tau[2])*(X2 > tau[1]))
-  tcf3 <- mean(X3 > tau[2])
-  return(c(tcf1, tcf2, tcf3))
+
+tcfs_emp <- function(x, y, z, tau) {
+  c(TCF1 = mean(x <= tau[1]),
+    TCF2 = mean(y <= tau[2] & y > tau[1]),
+    TCF3 = mean(z > tau[2])
+  )
 }
 
-#' @export
-ROC_emp_surface <- function(X1, X2, X3, ncp = 150, main, color = "gray40",
-                            alpha = 0.5) {
-  # , ellipsoid = FALSE, cpts = NULL, ci_level = 0.95) {
-  cp <- c(-Inf, seq(min(c(X1, X2, X3)), max(c(X1, X2, X3)),
-                    length.out = ncp - 2), Inf)
-  cp1 <- rep(cp, seq(ncp - 1, 0, by = -1))
-  cp2 <- c()
-  for(i in 1:(ncp - 1)){
-    cp2 <- c(cp2, cp[-c(1:i)])
+.check_roc_surface_data <- function(x, y, z, ncp) {
+  .check_numeric(x, "x")
+  .check_numeric(y, "y")
+  .check_numeric(z, "z")
+  if (any(!is.finite(x))) {
+    stop("'x' must contain only finite values", call. = FALSE)
   }
-  cpoint <- cbind(cp1, cp2)
-  ROCpoint <- t(apply(cpoint, 1, function(t) {
-    tcfs_emp(X1 = X1, X2 = X2, X3 = X3, tau = t)
-  }))
-  # ROCpoint <- matrix(unlist(ROCpoint), ncol = 3, byrow = TRUE)
+  if (any(!is.finite(y))) {
+    stop("'y' must contain only finite values", call. = FALSE)
+  }
+  if (any(!is.finite(z))) {
+    stop("'z' must contain only finite values", call. = FALSE)
+  }
+  if (!is.numeric(ncp) || length(ncp) != 1L || is.na(ncp) ||
+      ncp < 3 || ncp != floor(ncp)) {
+    stop("'ncp' must be a single integer greater than or equal to 3",
+         call. = FALSE)
+  }
+  as.integer(ncp)
+}
+
+.roc_surface_cutpoints <- function(x, y, z, ncp) {
+  values <- c(x, y, z)
+  c(-Inf, seq(min(values), max(values), length.out = ncp - 2), Inf)
+}
+
+.roc_surface_threshold_pairs <- function(cutpoints) {
+  ncp <- length(cutpoints)
+  cp1 <- rep(cutpoints, seq(ncp - 1, 0, by = -1))
+  cp2 <- unlist(
+    lapply(seq_len(ncp - 1), function(i) cutpoints[-seq_len(i)]),
+    use.names = FALSE
+  )
+  cbind(cp1, cp2)
+}
+
+.roc_surface_points <- function(x, y, z, cpoint) {
+  ROCpoint <- t(vapply(seq_len(nrow(cpoint)), function(i) {
+    tcfs_emp(x = x, y = y, z = z, tau = cpoint[i, ])
+  }, numeric(3)))
   colnames(ROCpoint) <- c("TCF1", "TCF2", "TCF3")
-  rownames(ROCpoint) <- paste("(",round(cp1, 3),", " ,round(cp2, 3), ")",
-                              sep = "")
-  ct1 <- numeric(ncp - 1)
-  for(i in 1:(ncp - 1)){
-    ct1[i] <- i*ncp - i*(i + 1)/2
-  }
-  tcf1 <- matrix(ROCpoint[ct1, 1], ncp - 1, ncp - 1, byrow = FALSE)
-  tcf3 <- matrix(ROCpoint[1:(ncp - 1), 3], ncp - 1, ncp - 1, byrow = TRUE)
-  tcf2 <- matrix(0, nrow = ncp - 1, ncol = ncp - 1)
+  rownames(ROCpoint) <- paste(
+    "(", round(cpoint[, 1], 3), ", ", round(cpoint[, 2], 3), ")",
+    sep = ""
+  )
+  ROCpoint
+}
+
+.roc_surface_grids <- function(ROCpoint, ncp) {
+  n_grid <- ncp - 1L
+  ct1 <- vapply(seq_len(n_grid), function(i) {
+    i * ncp - i * (i + 1) / 2
+  }, numeric(1))
+  tcf1 <- matrix(ROCpoint[ct1, 1], n_grid, n_grid, byrow = FALSE)
+  tcf3 <- matrix(ROCpoint[seq_len(n_grid), 3], n_grid, n_grid, byrow = TRUE)
+  tcf2 <- matrix(0, nrow = n_grid, ncol = n_grid)
   tcf2[lower.tri(tcf2, diag = TRUE)] <- ROCpoint[, 2]
-  tcf2 <- t(tcf2)
-  res <- list()
-  res$vals <- ROCpoint
-  res$cpoint <- cpoint
-  res$ncp <- ncp
-  res$tcf1 <- tcf1
-  res$tcf2 <- tcf2
-  res$tcf3 <- tcf3
-  ###
+  list(
+    tcf1 = tcf1,
+    tcf2 = t(tcf2),
+    tcf3 = tcf3
+  )
+}
+
+.new_ROC_emp_surface <- function(x, y, z, ncp = 150, call = NULL) {
+  ncp <- .check_roc_surface_data(x, y, z, ncp)
+  cutpoints <- .roc_surface_cutpoints(x, y, z, ncp)
+  cpoint <- .roc_surface_threshold_pairs(cutpoints)
+  ROCpoint <- .roc_surface_points(x, y, z, cpoint)
+  grids <- .roc_surface_grids(ROCpoint, ncp)
+  structure(
+    c(
+      list(
+        vals = ROCpoint,
+        cpoint = cpoint,
+        cutpoints = cutpoints,
+        ncp = ncp,
+        n = c(x = length(x), y = length(y), z = length(z)),
+        call = call
+      ),
+      grids
+    ),
+    class = c("ROC_emp_surface", "roc_emp_surface")
+  )
+}
+
+.roc_surface_default_matrix <- function() {
+  rbind(
+    c(-0.8370321, -0.5446390, -0.0523976, 0),
+    c(0.1272045, -0.2868422, 0.9494949, 0),
+    c(-0.5321618, 0.7880925, 0.3093767, 0),
+    c(0, 0, 0, 1)
+  )
+}
+
+.open_roc_surface_scene <- function() {
   open3d(antialias = 8)
-  my_user_matrix <- rbind(c(-0.8370321, -0.5446390, -0.0523976, 0),
-                          c(0.1272045, -0.2868422, 0.9494949, 0),
-                          c(-0.5321618, 0.7880925, 0.3093767, 0),
-                          c(0, 0, 0, 1))
-  par3d(windowRect = 50 + c(0, 0, 1250,1250), userMatrix = my_user_matrix)
-  if (missing(main)) {
-    main <- "Empirical ROC surface"
-  }
+  par3d(
+    windowRect = 50 + c(0, 0, 1250, 1250),
+    userMatrix = .roc_surface_default_matrix()
+  )
+}
+
+.draw_roc_surface_frame <- function(main = "Empirical ROC surface") {
   plot3d(0, 0, 0, type = "n", box = FALSE, xlab = "", ylab = "", zlab = "",
-         xlim = c(0, 1), ylim = c(0, 1), zlim = c(0, 1), axes = FALSE)
+    xlim = c(0, 1), ylim = c(0, 1), zlim = c(0, 1), axes = FALSE)
   axes3d(edges = c("x--", "y--", "z--"), cex = 1.4, lwd = 2)
   mtext3d("TCF 1", "x--", line = 2, at = 0.35)
   mtext3d("TCF 2", "z--", line = 4, at = 0.55)
   mtext3d("TCF 3", "y--", line = 4, at = 0.15, level = 2)
-  bgplot3d({
-    plot.new()
-    title(main = main, line = 1)
-  })
-  # title3d(
-  #   main,
-  #   xlab="TCF 1",
-  #   ylab="TCF 3",
-  #   zlab="TCF 2"
-  # )
-  surface3d(tcf1, tcf3, tcf2, col = color, alpha = alpha)
+  if (!is.null(main)) {
+    bgplot3d({
+      plot.new()
+      title(main = main, line = 1)
+    })
+  }
+}
+
+.draw_roc_surface <- function(x, color = "steelblue", alpha = 0.5) {
+  surface3d(x$tcf1, x$tcf3, x$tcf2, col = color, alpha = alpha)
+}
+
+#' @export
+ROC_emp_surface <- function(x, y, z, ncp = 150, main, color = "steelblue",
+                            alpha = 0.5, plot = TRUE) {
+  object <- .new_ROC_emp_surface(x = x, y = y, z = z,
+    ncp = ncp, call = match.call()
+  )
+  if (plot) {
+    main <- if (missing(main)) "Empirical ROC surface" else main
+    plot(object, type = "surface", main = main, color = color, alpha = alpha)
+  }
+  invisible(object)
+}
+
+#' @export
+plot.ROC_emp_surface <- function(x, main = "Empirical ROC surface",
+                                 color = "steelblue", alpha = 0.5,
+                                 new_window = TRUE, add = FALSE, ...) {
+  if (new_window && !add) {
+    .open_roc_surface_scene()
+  }
+  if (!add) {
+    .draw_roc_surface_frame(main = main)
+  }
+  .draw_roc_surface(x, color = color, alpha = alpha)
   light3d()
-  # if (ellipsoid) {
-  #   if (is.null(cpts)) stop("Need to specified pair of thresholds to plot the confidence region.")
-  #   else {
-  #     z1 <- seq(0, 1, length.out = 51)
-  #     z2 <- seq(0, 1, length.out = 51)
-  #     z3 <- seq(0, 1, length.out = 51)
-  #     contour3d(f = function(x, y, z){
-  #       empi_llike_3C(X1 = X1, X2 = X2, X3 = X3, n1 = length(X1),
-  #                     n2 = length(X2), n3 = length(X3), tcf1 = x, tcf2 = z,
-  #                     tcf3 = y, tau = cpts, type_F = "empi")
-  #     }, level = qchisq(ci_level, 3), x = z1, y = z3, z = z2, draw = TRUE,
-  #     add = TRUE, color2 = "blue", smooth = "standard", alpha = 0.5,
-  #     fill = FALSE)
-  #     tcf_orgi <- tcfs_emp(X1 = X1, X2 = X2, X3 = X3, tau = cpts)
-  #     plot3d(tcf_orgi[1], tcf_orgi[3], tcf_orgi[2], type = "s", col = "red",
-  #            radius = 0.01, add = TRUE)
-  #   }
-  # }
-  invisible(res)
+  invisible(x)
 }
 
 #' @export
-ROC_emp_surface_2 <- function(X1, X2, X3, ncp = 150, main, color = "gray40",
-                              alpha = 0.5) {
-  # , ellipsoid = FALSE, cpts = NULL, ci_level = 0.95) {
-  cp <- c(-Inf, seq(min(c(X1, X2, X3)), max(c(X1, X2, X3)),
-                    length.out = ncp - 2), Inf)
-  cp1 <- rep(cp, seq(ncp - 1, 0, by = -1))
-  cp2 <- c()
-  for(i in 1:(ncp - 1)){
-    cp2 <- c(cp2, cp[-c(1:i)])
-  }
-  cpoint <- cbind(cp1, cp2)
-  ROCpoint <- t(apply(cpoint, 1, function(t) {
-    tcfs_emp(X1 = X1, X2 = X2, X3 = X3, tau = t)
-  }))
-  # ROCpoint <- matrix(unlist(ROCpoint), ncol = 3, byrow = TRUE)
-  colnames(ROCpoint) <- c("TCF1", "TCF2", "TCF3")
-  rownames(ROCpoint) <- paste("(",round(cp1, 3),", " ,round(cp2, 3), ")",
-                              sep = "")
-  index <- matrix(NA, ncp - 1, ncp - 1)
-  k <- 1
-  for(i in 1:(ncp-1)){
-    for(j in i:(ncp-1)){
-      index[i,j] <- k
-      k <- k + 1
-    }
-  }
-  triangles <- list()
-  for(i in 1:(ncp-2)){
-    for(j in i:(ncp-2)){
-      A <- index[i,j]
-      B <- index[i,j+1]
-      C <- index[i+1,j+1]
-      if(!any(is.na(c(A,B,C)))){
-        triangles[[length(triangles)+1]] <- c(A,B,C)
-      }
-      D <- index[i+1,j+2]
-      if(!any(is.na(c(B,C,D)))){
-        triangles[[length(triangles)+1]] <- c(B,D,C)
-      }
-    }
-  }
-  triangles <- do.call(rbind, triangles)
-  xyz <- ROCpoint
-  ##
-  for(i in 1:nrow(triangles)){
-    id <- triangles[i,]
-    triangles3d(x = xyz[id,1], y = xyz[id,3], z = xyz[id,2], color = color,
-                alpha = alpha)
-  }
-  vb <- rbind(t(ROCpoint[,c(1,3,2)]), 1)
-  it <- t(triangles)
-  mesh <- tmesh3d(vertices = vb, indices = it, homogeneous = TRUE)
-  shade3d(mesh, color = color, alpha = alpha)
-  ###
-  # ct1 <- numeric(ncp - 1)
-  # for(i in 1:(ncp - 1)){
-  #   ct1[i] <- i*ncp - i*(i + 1)/2
-  # }
-  # tcf1 <- matrix(ROCpoint[ct1, 1], ncp - 1, ncp - 1, byrow = FALSE)
-  # tcf3 <- matrix(ROCpoint[1:(ncp - 1), 3], ncp - 1, ncp - 1, byrow = TRUE)
-  # tcf2 <- matrix(0, nrow = ncp - 1, ncol = ncp - 1)
-  # tcf2[lower.tri(tcf2, diag = TRUE)] <- ROCpoint[, 2]
-  # tcf2 <- t(tcf2)
-  # res <- list()
-  # res$vals <- ROCpoint
-  # res$cpoint <- cpoint
-  # res$ncp <- ncp
-  # res$tcf1 <- tcf1
-  # res$tcf2 <- tcf2
-  # res$tcf3 <- tcf3
-  # ###
-  # open3d(antialias = 8)
-  # my_user_matrix <- rbind(c(-0.8370321, -0.5446390, -0.0523976, 0),
-  #                         c(0.1272045, -0.2868422, 0.9494949, 0),
-  #                         c(-0.5321618, 0.7880925, 0.3093767, 0),
-  #                         c(0, 0, 0, 1))
-  # par3d(windowRect = 50 + c(0, 0, 1250,1250), userMatrix = my_user_matrix)
-  # if (missing(main)) {
-  #   main <- "Empirical ROC surface"
-  # }
-  # plot3d(0, 0, 0, type = "n", box = FALSE, xlab = "", ylab = "", zlab = "",
-  #        xlim = c(0, 1), ylim = c(0, 1), zlim = c(0, 1), axes = FALSE)
-  # axes3d(edges = c("x--", "y--", "z--"), cex = 1.4, lwd = 2)
-  # mtext3d("TCF 1", "x--", line = 2, at = 0.35)
-  # mtext3d("TCF 2", "z--", line = 4, at = 0.55)
-  # mtext3d("TCF 3", "y--", line = 4, at = 0.15, level = 2)
-  # bgplot3d({
-  #   plot.new()
-  #   title(main = main, line = 1)
-  # })
-  # title3d(
-  #   main,
-  #   xlab="TCF 1",
-  #   ylab="TCF 3",
-  #   zlab="TCF 2"
-  # )
-  # surface3d(tcf1, tcf3, tcf2, col = color, alpha = alpha)
-  # light3d()
-  # if (ellipsoid) {
-  #   if (is.null(cpts)) stop("Need to specified pair of thresholds to plot the confidence region.")
-  #   else {
-  #     z1 <- seq(0, 1, length.out = 51)
-  #     z2 <- seq(0, 1, length.out = 51)
-  #     z3 <- seq(0, 1, length.out = 51)
-  #     contour3d(f = function(x, y, z){
-  #       empi_llike_3C(X1 = X1, X2 = X2, X3 = X3, n1 = length(X1),
-  #                     n2 = length(X2), n3 = length(X3), tcf1 = x, tcf2 = z,
-  #                     tcf3 = y, tau = cpts, type_F = "empi")
-  #     }, level = qchisq(ci_level, 3), x = z1, y = z3, z = z2, draw = TRUE,
-  #     add = TRUE, color2 = "blue", smooth = "standard", alpha = 0.5,
-  #     fill = FALSE)
-  #     tcf_orgi <- tcfs_emp(X1 = X1, X2 = X2, X3 = X3, tau = cpts)
-  #     plot3d(tcf_orgi[1], tcf_orgi[3], tcf_orgi[2], type = "s", col = "red",
-  #            radius = 0.01, add = TRUE)
-  #   }
-  # }
-  invisible(res)
+print.ROC_emp_surface <- function(x, ...) {
+  cat("Empirical ROC surface\n")
+  cat("Cut points:", x$ncp, "\n")
+  cat("Threshold pairs:", nrow(x$cpoint), "\n")
+  cat("Sample sizes:", paste(names(x$n), x$n, sep = " = ", collapse = ", "),
+      "\n")
+  invisible(x)
 }
 
 #' @export
-CR_emp_tcfs <- function(X1, X2, X3, cpts = NULL, ci_level = 0.95,
+CR_emp_tcfs <- function(x, y, z, cpts = NULL, ci_level = 0.95,
                         color1 = "red", color2 = "blue", smooth = 0,
                         alpha = 0.5, fill = FALSE) {
-  if (is.null(cpts)) stop("Need to specified pair of thresholds to plot the confidence region.")
-  else {
+  if (is.null(cpts)) {
+    stop("Need to specified pair of thresholds to plot the confidence region.")
+  } else {
+    X1 <- x
+    X2 <- y
+    X3 <- z
     z1 <- seq(0, 1, length.out = 51)
     z2 <- seq(0, 1, length.out = 51)
     z3 <- seq(0, 1, length.out = 51)
     contour3d(f = function(x, y, z){
-      empi_llike_3C(X1 = X1, X2 = X2, X3 = X3, n1 = length(X1),
-                    n2 = length(X2), n3 = length(X3), tcf1 = x, tcf2 = z,
-                    tcf3 = y, tau = cpts, type_F = "empi")
+      empi_llike_3C(x = X1, y = X2, z = X3, n1 = length(X1), n2 = length(X2), 
+                    n3 = length(X3), tcf1 = x, tcf2 = z, tcf3 = y, 
+                    tau = cpts, type_F = "empi")
     }, level = qchisq(ci_level, 3), x = z1, y = z3, z = z2, draw = TRUE,
     add = TRUE, color2 = color2, smooth = smooth, alpha = alpha, fill = fill)
-    tcf_orgi <- tcfs_emp(X1 = X1, X2 = X2, X3 = X3, tau = cpts)
+    tcf_orgi <- tcfs_emp(x = x, y = y, z = z, tau = cpts)
     plot3d(tcf_orgi[1], tcf_orgi[3], tcf_orgi[2], type = "s", col = color1,
            radius = 0.01, add = TRUE)
   }
