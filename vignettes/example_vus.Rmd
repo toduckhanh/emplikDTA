@@ -43,16 +43,33 @@ X3 <- rnorm(n3, mu_true[3], sigma_true[3])
 
 ```{r}
 vus(x = X1, y = X2, z = X3)
+```
 
+```{r}
 data_test <- data.frame(biom = c(X1, X2, X3), 
                         diag = rep(c("1", "2", "3"), c(n1, n2, n3)))
+```
 
+
+```{r}
 vus(formula = biom ~ diag, data = data_test)
+```
 
-vus(formula = biom ~ diag, data = data_test, ci_level = 0.9)
 
+```{r}
+vus(formula = biom ~ diag, data = data_test, ci_level = 0.90)
+```
+
+```{r}
+vus(formula = biom ~ diag, data = data_test, diag_levels = c("1", "2", "3"))
+```
+
+```{r}
 vus(formula = biom ~ diag, data = data_test, diag_levels = c("2", "3", "1"))
+```
 
+
+```{r}
 out_test <- vus(formula = biom ~ diag, data = data_test)
 print(out_test)
 ```

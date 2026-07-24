@@ -14,9 +14,9 @@
   package, including the most important functions.
 }
 \author{
-Your Name, email optional.
+Duc-Khanh To, tdkhanh@hcmus.edu.vn.
 
-Maintainer: Your Name <your@email.com>
+Maintainer: Duc-Khanh To <tdkhanh@hcmus.edu.vn>
 }
 \references{
   This optional section can contain literature or other references for
