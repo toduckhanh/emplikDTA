@@ -42,7 +42,7 @@ X3 <- rnorm(n3, mu_true[3], sigma_true[3])
 ## Plot ROC surface
 
 ```{r}
-ROC_emp_surface(X1, X2, X3, color = "steelblue", alpha = 0.5)
+out_roc_surface <- ROC_emp_surface(X1, X2, X3, color = "steelblue", alpha = 0.5)
 rgl::rglwidget(
     width = 800,
     height = 800
@@ -51,11 +51,29 @@ rgl::rglwidget(
 
 
 ```{r}
-CR_emp_tcfs(X1, X2, X3, cpts = c(0.5, 3.4), fill = TRUE)
+CR_tcfs(out_roc_surface, cpts = c(0.5, 3.4), fill = TRUE)
 rgl::rglwidget(width = 800, height = 800)
 ```
 
 
+```{r}
+data_test <- data.frame(biom = c(X1, X2, X3), 
+                          diag = rep(c("1", "2", "3"), c(n1, n2, n3)))
+```
+
+```{r}
+out_roc_surface_2 <- ROC_emp_surface(formula = biom ~ diag, data = data_test, 
+                                     color = "steelblue", alpha = 0.5)
+rgl::rglwidget(
+    width = 800,
+    height = 800
+)
+```
 
 
+
+```{r}
+CR_tcfs(out_roc_surface_2, cpts = c(0.5, 3.4), fill = TRUE)
+rgl::rglwidget(width = 800, height = 800)
+```
 

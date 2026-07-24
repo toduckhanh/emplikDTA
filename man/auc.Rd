@@ -2,27 +2,87 @@
 % Please edit documentation in R/EL_auc.R
 \name{auc}
 \alias{auc}
-\title{Area Under ROC surface (AUC) estimation and Empirical Likelihood Inference for AUC}
+\alias{auc.default}
+\alias{auc.formula}
+\alias{print.auc}
+\alias{summary.auc}
+\title{Area Under ROC curve (AUC) estimation and Empirical Likelihood Inference for AUC}
 \usage{
 auc(x, ...)
+
+\method{auc}{default}(x, y, auc0 = 1/2, ci_level = 0.95, B = 500, seed, plot = FALSE)
+
+\method{auc}{formula}(formula, data, diag_levels = NULL, subset, na.action, ...)
+
+\method{print}{auc}(x, ...)
+
+\method{summary}{auc}(object, ...)
 }
 \arguments{
-\item{x, y}{Numeric vectors (default method)}
+\item{x, y}{numeric vectors (default method) contains values of diagnostic test (biomarker)
+corresponding to the first and second class of disease. The ordering is intended 
+to be ``increasing'' with respect to the disease severity.}
 
-\item{formula}{A formula of the form y ~ group}
+\item{...}{for formula method: additional arguments to be passed to the \code{\link[emplikDTA]{auc}}
+i.e., \code{auc0}, \code{ci_level}, \code{B}, \code{plot}.}
 
-\item{data}{Data frame}
+\item{auc0}{a number indicating the true value of the AUC.}
 
-\item{theta0}{Null hypothesis value}
+\item{ci_level}{a confidence level to be used for constructing the confidence interval; 
+default is 0.95.}
 
-\item{ci_level}{Confidence level}
+\item{B}{the number of bootstrap replicates (default: 500).}
 
-\item{B}{Bootstrap size}
+\item{seed}{the value of \code{.Random.seed} when bootstrap started work.}
 
-\item{seed}{Random seed}
+\item{plot}{a logical indicating whether you want to plot empirical likelihood ratio
+and confidence interval for AUC.}
 
-\item{plot}{Logical; plot empirical likelihood}
+\item{formula}{an object of class "\code{\link[stats]{formula}}" (or one that can be coerced 
+to that class): a symbolic description of the model to be fitted. 
+The details of model specification are given under ‘Details’.}
+
+\item{data}{a data frame containing the variables in the formula.}
+
+\item{diag_levels}{a vector (of strings) containing the ordered name chosen for 
+the disease classes. The ordering is intended to be ``increasing'' with respect to the 
+disease severity. If \code{diag_levels = NULL} (default), the elements of the vector 
+will be automatically determined from data, by considering the order of the means 
+of the test values for each disease class (diagnostic group).}
+
+\item{subset}{an optional expression indicating the subset of the rows of data 
+that should be used in the fit. This can be a logical vector, or a numeric vector
+indicating which observation numbers are to be included, or a character vector of 
+the row names to be included. All observations are included by default.}
+
+\item{na.action}{a function which indicates what should happen when the data contain \code{NA}s. 
+The default is set by the \code{na.action} setting of \code{\link[base]{options}}, and is 
+\code{\link[stats]{na.fail}} if that is unset. The ‘factory-fresh’ default is 
+\code{\link[stats]{na.omit}}. Another possible value is \code{NULL}, no action. 
+Value \code{\link[stats]{na.exclude}} can be useful.}
+}
+\value{
+\code{auc} returns an object of class "auc" which is a list containing at least the following components:
+
+\item{call}{the matched call.}
+\item{estimate}{the estimated VUS.}
+\item{conf.int}{a confidence interval for the AUC.}
+\item{p.value}{the p-value for the test.}
+\item{r.adj}{the value of adjusted pamarameter.}
+\item{ci_level}{confidence level of the interval.}
+
+Generic functions such as \code{print} is also used to show the results.
 }
 \description{
-Area Under ROC surface (AUC) estimation and Empirical Likelihood Inference for AUC
+This function estimates the AUC of a continuous diagnostic test (biomarker) 
+in two-class setting, together with a confidence interval.
+}
+\details{
+....
+}
+\references{
+To, D. K., Adimari, G., & Chiogna, M. (2024). 
+Interval estimation in three-class receiver operating characteristic analysis: 
+A fairly general approach based on the empirical likelihood. 
+\emph{Statistical Methods in Medical Research}, \bold{33}, 5, 875-893.
 }
