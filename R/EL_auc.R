@@ -71,7 +71,7 @@ bts_auc <- function(x, y, n1, n2, n, auc_est, B) {
 #' A fairly general approach based on the empirical likelihood. 
 #' \emph{Statistical Methods in Medical Research}, \bold{33}, 5, 875-893.
 #' 
-#' 
+#'@export
 auc <- function(x, ...) {
   UseMethod("auc")
 }
