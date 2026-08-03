@@ -37,7 +37,6 @@ sp_se_emp <- function(x, y, tau) {
   data.frame(FPR = 1 - x$vals[, "Spe"], TPR = x$vals[, "Sen"])
 }
 
-
 .draw_roc_curve <- function(x, color = "steelblue", linewidth = 1) {
   df <- .roc_curve_df(x)
   ggplot(data = df, mapping = aes(x = FPR, y = TPR)) +
