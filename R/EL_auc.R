@@ -1,12 +1,8 @@
 # bootstrap procedure for EL vus ----
 bts_auc <- function(x, y, n1, n2, n, auc_est, B) {
   empi_bts <- sapply(1:B, function(i){
-    # flag <- 0
-    # while(flag == 0){
-      x.b <- sample(x, n1, replace = TRUE)
-      y.b <- sample(y, n2, replace = TRUE)
-      # flag <- as.numeric(mean(x.b) < mean(y.b))
-    # }
+    x.b <- sample(x, n1, replace = TRUE)
+    y.b <- sample(y, n2, replace = TRUE)
     auc_est_bts <- auc_core(x.b, y.b)
     if (auc_est_bts == 1) {
       auc_est_bts <- auc_est_bts/(1 + 0.5 / n1 / n2)
@@ -24,10 +20,10 @@ bts_auc <- function(x, y, n1, n2, n, auc_est, B) {
     ll_prob_adj(x, theta_est = auc_est, r_adj = r_est, qc = qchisq(ci_level, 1),
                 n = n) + qchisq(ci_level, 1)
   })
-  df <- data.frame(vus = xgrid, elr = exp(-0.5 * ll))
-  df$inside_ci <- df$vus >= ci[1] & df$vus <= ci[2]
+  df <- data.frame(auc = xgrid, elr = exp(-0.5 * ll))
+  df$inside_ci <- df$auc >= ci[1] & df$auc <= ci[2]
   cutoff <- exp(-0.5 * qchisq(ci_level, 1))
-  p <- ggplot(data = df, mapping = aes(x = vus, y = elr)) +
+  p <- ggplot(data = df, mapping = aes(x = auc, y = elr)) +
     geom_line(linewidth = 0.75) +
     geom_ribbon(data = df[df$inside_ci, ], mapping = aes(ymin = 0, ymax = elr),
                 alpha = 0.2) +

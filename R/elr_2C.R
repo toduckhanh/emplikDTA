@@ -1,4 +1,4 @@
-# empirical likelihood ratio function for (TCF1, TCF2, TCF3) ----
+# empirical likelihood ratio function for (Se, Sp) ----
 .empi_llike_prepare <- function(x, y, tau,
                                 type_F = c("empi", "Adi", "Adi_ties")) {
   type_F <- match.arg(type_F)

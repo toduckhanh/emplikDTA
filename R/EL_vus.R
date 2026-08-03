@@ -1,15 +1,13 @@
+#' @import stats
+#' @import utils
 #' @import ggplot2
 
 # bootstrap procedure for EL vus ----
 bts_vus <- function(x, y, z, n1, n2, n3, n, vus_est, B) {
   empi_bts <- sapply(1:B, function(i){
-    # flag <- 0
-    # while(flag == 0){
-      x.b <- sample(x, n1, replace = TRUE)
-      y.b <- sample(y, n2, replace = TRUE)
-      z.b <- sample(z, n3, replace = TRUE)
-    #   flag <- as.numeric((mean(x.b) < mean(y.b)) * (mean(y.b) < mean(z.b)))
-    # }
+    x.b <- sample(x, n1, replace = TRUE)
+    y.b <- sample(y, n2, replace = TRUE)
+    z.b <- sample(z, n3, replace = TRUE)
     vus_est_bts <- vus_core(x.b, y.b, z.b)
     if (vus_est_bts == 1) {
       vus_est_bts <- vus_est_bts/(1 + 0.5 / n1 / n2 / n3)
