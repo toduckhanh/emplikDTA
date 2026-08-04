@@ -180,7 +180,10 @@ tcf2.formula <- function(formula, data, diag_levels = NULL, subset,
 }
 
 #' @export
-print.tcf2 <- function(x, ...) {
+print.tcf2 <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
+  cat("\n")
+  cat("CALL: ",
+      paste(deparse(x$call), sep = "\n", collapse = "\n"), "\n \n", sep = "")
   cat("TCF1:\n")
   print(x$tcf1)
   cat("TCF3:\n")

@@ -9,3 +9,19 @@ vusC_ties <- function(tt1, tt2, tt3) {
     .Call(`_emplikDTA_vusC_ties`, tt1, tt2, tt3)
 }
 
+cdf_kernel_C <- function(x, X, Ktype, bwd) {
+    .Call(`_emplikDTA_cdf_kernel_C`, x, X, Ktype, bwd)
+}
+
+simpson <- function(fx, nx, hx) {
+    .Call(`_emplikDTA_simpson`, fx, nx, hx)
+}
+
+cdf_loocv_kernel_C <- function(x, X, Ktype, bwd, hx) {
+    .Call(`_emplikDTA_cdf_loocv_kernel_C`, x, X, Ktype, bwd, hx)
+}
+
+cv_bwd_C <- function(x, X, Ktype, hx, bwd_seq) {
+    .Call(`_emplikDTA_cv_bwd_C`, x, X, Ktype, hx, bwd_seq)
+}
+

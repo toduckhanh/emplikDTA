@@ -14,7 +14,7 @@ bts_auc <- function(x, y, n1, n2, n, auc_est, B) {
 }
 
 # function for plotting the likelihood ratio and confidence interval
-.plot_auc <- function(auc_est, r_est, ci_level, n, ci) {
+plot_auc <- function(auc_est, r_est, ci_level, n, ci) {
   xgrid <- seq(0, 1, by = 0.001)
   ll <- sapply(xgrid, function(x) {
     ll_prob_adj(x, theta_est = auc_est, r_adj = r_est, qc = qchisq(ci_level, 1),
@@ -121,7 +121,7 @@ auc.default <- function(x, y, auc0 = 1/2, ci_level = 0.95, B = 500, seed,
                       qc = qc, r_adj = r_est, n = n)
   ci <- c(LI, UI)
   if (plot) {
-    pl <- .plot_auc(auc_est, r_est, ci_level, n, ci)
+    pl <- plot_auc(auc_est, r_est, ci_level, n, ci)
     print(pl)
   }
   ## p-value

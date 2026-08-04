@@ -13,7 +13,7 @@ Description: This package provides some functions for performing statistical inf
 License: GPL (>= 2)
 Depends: R (>= 3.5.0), stats, utils, graphics, rgl, misc3d, ggplot2
 Imports: Rcpp (>= 1.1.1)
-LinkingTo: Rcpp
+LinkingTo: Rcpp, RcppArmadillo
 Encoding: UTF-8
 LazyData: true
 LazyLoad: yes
