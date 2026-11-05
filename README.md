@@ -53,8 +53,5 @@ inference defaults to seed 34 and changes the global RNG state.
 ## Documentation and development
 
 Use `help(package = "emplikDTA")` for the function index. Each public topic
-lists arguments, return values and implementation limitations. The
-[function review](docs/function-review.md) records unresolved code issues;
-the [helper guide](docs/function-reference.md) maps internal functions to
-source files and explains their contracts. Worked examples are in `vignettes/`.
+lists arguments, return values and implementation limitations. 
 
