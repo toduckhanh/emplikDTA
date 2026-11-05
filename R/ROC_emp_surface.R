@@ -106,15 +106,20 @@ tcfs_emp <- function(x, y, z, tau) {
 
 # Main function for ROC surface ----
 # Empirical Likelihood Inference for ROC surface ----
-#' @title Empirical ROC curve estimation and Empirical Likelihood Inference for ROC curve
-#' @aliases ROC_emp_curve
-#' @aliases ROC_emp_curve.default
-#' @aliases ROC_emp_curve.formula
-#' @description This function estimates the ROC curve of a continuous diagnostic test (biomarker) 
-#' in two-class setting.
+#' @title Empirical ROC surface estimation
+#' @aliases ROC_emp_surface
+#' @aliases ROC_emp_surface.default
+#' @aliases ROC_emp_surface.formula
+#' @description This function estimates the ROC surface of a continuous diagnostic test (biomarker) 
+#' in three-class setting.
 #' 
 #' 
-#' @details ....
+#' @details For ordered thresholds \eqn{t_1} and \eqn{t_2}, \eqn{TCF_1 = P(X <= t_1)}, 
+#' \eqn{TCF_2 = P(t_1 < Y \le t_2)}, and \eqn{TCF_3 = P(Z > t_2)}. 
+#' The plot axes are \eqn{TCF_1}, \eqn{TCF_3} and \eqn{TCF_2}. Plotting uses an rgl device.
+#' The grid contains minus and plus infinity and ncp - 2 equally spaced
+#' points over the pooled range. The formula is \code{marker ~ group}.
+#' The default methods return the fitted object invisibly.
 #' 
 #' 
 #' 
@@ -122,8 +127,12 @@ tcfs_emp <- function(x, y, z, tau) {
 #' is a list containing at least the following components:
 #'
 #' \item{call}{the matched call.}
-#' \item{ROCpoint}{the estimated ROC surface: a matrix with three columns named TCF1, TCF2 and TCF3.}
-#' \item{cutpoints}{a matrix of the pair of cutpoints.}
+#' \item{n,ncp}{Group sizes and number of grid thresholds.}
+#' \item{x,y,z}{Original group samples.}
+#' \item{vals}{Matrix with columns TCF1, TCF2 and TCF3.}
+#' \item{cpoint}{Matrix of threshold pairs.}
+#' \item{cutpoints}{Vector of grid thresholds.}
+#' \item{tcf1,tcf2,tcf3}{Matrices used to draw the surface.}
 #'
 #' Generic functions such as \code{plot} is also used to make a 3D plot of ROC surface
 #'  with \code{rgl} style.
@@ -136,6 +145,14 @@ tcfs_emp <- function(x, y, z, tau) {
 #' \emph{Statistical Methods in Medical Research}, \bold{33}, 5, 875-893.
 #' 
 #' 
+#' @examples
+#' set.seed(123)
+#' x <- rnorm(40, 0, 1)
+#' y <- rnorm(40, 1, 1)
+#' z <- rnorm(40, 2, 1)
+#' fit <- ROC_emp_surface(x, y, z, ncp = 15, plot = FALSE)
+#' head(fit$vals)
+#' print(fit)
 #' @export
 ROC_emp_surface <- function(x, ...) {
   UseMethod("ROC_emp_surface")
@@ -149,7 +166,7 @@ ROC_emp_surface <- function(x, ...) {
 #' @param ncp an integer specifying the number of cut-points used to construct
 #'   the empirical ROC surface. Larger values produce a smoother approximation at
 #'   the expense of additional computation.
-#' @param main a character string giving the title of the plot.
+#' @param main Requested plot title; currently accepted but not drawn.
 #' @param color a character string specifying the color of the ROC surface.
 #' @param alpha vector of alpha values between 0.0 (fully transparent) and 1.0 (opaque).
 #' @param plot a logical indicating whether the empirical ROC surface should be
@@ -168,36 +185,23 @@ ROC_emp_surface.default <- function(x, y, z, ncp = 150, main,
   invisible(object)
 }
 
-#' #' @export
-#' ROC_emp_surface <- function(x, y, z, ncp = 150, main, color = "steelblue",
-#'                             alpha = 0.5, plot = TRUE) {
-#'   object <- .new_ROC_emp_surface(x = x, y = y, z = z,
-#'                                  ncp = ncp, call = match.call())
-#'   if (plot) {
-#'     main <- if (missing(main)) "Empirical ROC surface" else main
-#'     plot(object, type = "surface", main = main, color = color, alpha = alpha)
-#'   }
-#'   invisible(object)
-#' }
-
-
 #' @rdname ROC_emp_surface 
 #' @param formula an object of class "\code{\link[stats]{formula}}" (or one that can be coerced 
 #' to that class): a symbolic description of the model to be fitted. 
-#' The details of model specification are given under ‘Details’.
+#' The details of model specification are given under 'Details'.
 #' @param data a data frame containing the variables in the formula.
 #' @param diag_levels a vector (of strings) containing the ordered name chosen for 
 #' the disease classes. The ordering is intended to be ``increasing'' with respect to the 
 #' disease severity. If \code{diag_levels = NULL} (default), the elements of the vector 
-#' will be automatically determined from data, by considering the order of the means 
-#' of the test values for each disease class (diagnostic group).
+#' follow the factor levels of the grouping variable (or the levels produced by
+#' coercing it to a factor). Groups are not reordered by their sample means.
 #' @param subset an optional expression indicating the subset of the rows of data 
 #' that should be used in the fit. This can be a logical vector, or a numeric vector
 #' indicating which observation numbers are to be included, or a character vector of 
 #' the row names to be included. All observations are included by default.
 #' @param na.action a function which indicates what should happen when the data contain \code{NA}s. 
 #' The default is set by the \code{na.action} setting of \code{\link[base]{options}}, and is 
-#' \code{\link[stats]{na.fail}} if that is unset. The ‘factory-fresh’ default is 
+#' \code{\link[stats]{na.fail}} if that is unset. The 'factory-fresh' default is 
 #' \code{\link[stats]{na.omit}}. Another possible value is \code{NULL}, no action. 
 #' Value \code{\link[stats]{na.exclude}} can be useful.
 #' @param ... for formula method: additional arguments to be passed to the
@@ -206,7 +210,6 @@ ROC_emp_surface.default <- function(x, y, z, ncp = 150, main,
 #' @exportS3Method
 ROC_emp_surface.formula <- function(formula, data, diag_levels = NULL, subset, 
                                     na.action, ...){
-  call <- match.call()
   # if (missing(data)) {
   #   stop("'data' must be provided for formula method", call. = FALSE)
   # }
@@ -240,6 +243,10 @@ ROC_emp_surface.formula <- function(formula, data, diag_levels = NULL, subset,
 }
 
 
+#' @rdname ROC_emp_surface
+#' @param new_window Open a new rgl window when not adding to a scene.
+#' @param add Add the surface to the current scene.
+#' @return Plot and print methods return the input invisibly.
 #' @export
 plot.ROC_emp_surface <- function(x, main = "Empirical ROC surface",
                                  color = "steelblue", alpha = 0.5,
@@ -255,6 +262,7 @@ plot.ROC_emp_surface <- function(x, main = "Empirical ROC surface",
   invisible(x)
 }
 
+#' @rdname ROC_emp_surface
 #' @export
 print.ROC_emp_surface <- function(x, ...) {
   cat("Empirical ROC surface\n")
@@ -265,35 +273,49 @@ print.ROC_emp_surface <- function(x, ...) {
   invisible(x)
 }
 
+#' Draw a joint confidence region for three true class fractions
+#'
+#' @description Add a fixed-threshold empirical likelihood confidence region
+#' and empirical operating point to an existing ROC surface scene.
+#' @param x An object of class \code{ROC_emp_surface}.
+#' @param cpts Numeric pair of ordered thresholds; must be supplied.
+#' @param ci_level Confidence level in (0, 1).
+#' @param color1 Colour of the empirical point.
+#' @param color2 Colour requested for the confidence boundary.
+#' @param smooth Smoothing argument passed to \code{misc3d::contour3d}.
+#' @param alpha Opacity of the confidence region.
+#' @param fill Whether to fill the contour surface.
+#' @param ... Arguments forwarded to the method.
+#' @details The region uses a chi-squared cutoff with three degrees
+#' of freedom on a 51-by-51-by-51 grid. Axes are TCF1, TCF3, TCF2.
+#' @return The input object, invisibly, if plotting succeeds.
+#' @seealso \code{\link{ROC_emp_surface}}
 #' @export
 CR_tcfs <- function(x, ...) {
   UseMethod("CR_tcfs")
 }
 
+#' @rdname CR_tcfs
 #' @exportS3Method
 CR_tcfs.ROC_emp_surface <- function(x, cpts = NULL, ci_level = 0.95,
                                     color1 = "red", color2 = "blue", smooth = 0,
-                                    alpha = 0.5, fill = FALSE) {
+                                    alpha = 0.5, fill = FALSE, ...) {
+  rlang::check_dots_empty()
   if (is.null(cpts)) {
     stop("Need to specified pair of thresholds to plot the confidence region.")
   } else {
-    X1 <- x$x
-    X2 <- x$y
-    X3 <- x$z
     z1 <- seq(0, 1, length.out = 51)
     z2 <- seq(0, 1, length.out = 51)
     z3 <- seq(0, 1, length.out = 51)
+    obj_tcfs <- empi_llike3_prepare(x = x$x, y = x$y, z = x$z, tau = cpts,
+                                    type_F = "empi")
     contour3d(f = function(x, y, z){
-      empi_llike_3C(x = X1, y = X2, z = X3, n1 = length(X1), n2 = length(X2), 
-                    n3 = length(X3), tcf1 = x, tcf2 = z, tcf3 = y, 
-                    tau = cpts, type_F = "empi")
+      empi_llike_3C(obj_tcfs, tcf1 = x, tcf2 = z, tcf3 = y)
     }, level = qchisq(ci_level, 3), x = z1, y = z3, z = z2, draw = TRUE,
     add = TRUE, color2 = color2, smooth = smooth, alpha = alpha, fill = fill)
-    tcf_orgi <- tcfs_emp(x = X1, y = X2, z = X3, tau = cpts)
+    tcf_orgi <- tcfs_emp(x = x$x, y = x$y, z = x$z, tau = cpts)
     plot3d(tcf_orgi[1], tcf_orgi[3], tcf_orgi[2], type = "s", col = color1,
            radius = 0.01, add = TRUE)
   }
   invisible(x)
 }
-
-

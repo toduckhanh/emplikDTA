@@ -2,3 +2,9 @@
 ^\.Rproj\.user$
 ^\.positai$
 ^\.claude$
+^\.cran$
+^cran-comments\.md$
+^docs$
+^COPYING$
+^src/.*\.(o|so|dll)$
+^tests/testthat/Rplots\.pdf$

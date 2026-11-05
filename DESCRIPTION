@@ -2,17 +2,28 @@ Package: emplikDTA
 Type: Package
 Title: Empirical Likelihood Inference for Diagnostic Test Accuracy
 Version: 0.1.0
-Date: 2026-02-14
 Authors@R: 
-    person(given = "Duc-Khanh",
+    c(person(given = "Duc-Khanh",
            family = "To",
            role = c("aut", "cre"),
            email = "tdkhanh@hcmus.edu.vn",
-           comment = c(ORCID = "0000-0002-4641-0764"))
-Description: This package provides some functions for performing statistical inference for the ROC curve analysis, and the ROC surface analysis.
+           comment = c(ORCID = "0000-0002-4641-0764")),
+           person(given = "Gianfranco",
+                      family = "Adimari",
+                      role = "ctb"),
+               person(given = "Monica",
+                      family = "Chiogna",
+                      role = "ctb"))
+Description: Estimates diagnostic accuracy for continuous markers in two or
+    three independent ordered groups. Provides empirical receiver operating
+    characteristic (ROC) curves and surfaces, empirical likelihood inference
+    for the area under the curve and the volume under the surface, and
+    kernel-based selection of diagnostic thresholds. Three-class empirical
+    likelihood methods are described in To, Adimari, and Chiogna (2024)
+    <doi:10.1177/09622802241238998>.
 License: GPL (>= 2)
 Depends: R (>= 3.5.0), stats, utils, graphics, rgl, misc3d, ggplot2
-Imports: Rcpp (>= 1.1.1)
+Imports: Rcpp (>= 1.1.1), rlang (>= 1.0.0)
 LinkingTo: Rcpp, RcppArmadillo
 Encoding: UTF-8
 LazyData: true
@@ -21,7 +32,10 @@ ByteCompile: yes
 NeedsCompilation: yes
 URL: https://github.com/toduckhanh/emplikDTA
 BugReports: https://github.com/toduckhanh/emplikDTA/issues
-Config/roxygen2/version: 8.0.0
-Suggests: 
+Config/roxygen2/version: 8.1.1
+Suggests:
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3

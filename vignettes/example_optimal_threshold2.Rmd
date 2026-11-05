@@ -1,0 +1,206 @@
+---
+title: "Guide for using threshold2 function"
+author: "Duc-Khanh To"
+date: '`r Sys.Date()`'
+vignette: >
+  %\VignetteIndexEntry{Guide for using threshold2 function}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+output: rmarkdown::html_vignette
+---
+
+```{r check pandoc, eval=TRUE, echo=FALSE}
+if (!requireNamespace("rmarkdown", quietly = TRUE) ||
+      !rmarkdown::pandoc_available("1.14")) {
+    warning(call. = FALSE, "These vignettes assume rmarkdown and pandoc version 1.14. These were not found. Older versions will not work.")
+    knitr::knit_exit()
+  }
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(emplikDTA)
+set.seed(34)
+```
+
+# Simulated data
+## Gamma and Log-Normal data
+Obtaining the true value for optimal threshold.
+```{r}
+YI_logGamma <- function(mu, sigma, start = NULL, method.optim = "L-BFGS-B",
+                        maxit = 200, lower = 0, upper = Inf){
+  if(is.null(start)) start <- mean(mu)
+  YI_logGamma_ff <- function(par, mu, sigma){
+    sp <- plnorm(par, meanlog = mu[1], sdlog = sigma[1])
+    se <- 1 - pgamma(par, shape = mu[2], rate = sigma[2])
+    return(se + sp - 1)
+  }
+  YI_optim <- optim(par = start, fn = YI_logGamma_ff, mu = mu, sigma = sigma,
+                    method = method.optim,
+                    control = list(maxit = maxit, fnscale = -1),
+                    lower = lower, upper = upper)
+  return(YI_optim)
+}
+
+CtP_logGamma <- function(mu, sigma, start = NULL, method.optim = "L-BFGS-B",
+                         maxit = 200, lower = 0, upper = Inf){
+  if(is.null(start)) start <- mean(mu)
+  CtP_logGamma_ff <- function(par, mu, sigma){
+    sp <- plnorm(par, meanlog = mu[1], sdlog = sigma[1])
+    se <- 1 - pgamma(par, shape = mu[2], rate = sigma[2])
+    return((1 - sp)^2 + (1 - se)^2)
+  }
+  CtP_optim <- optim(par = start, fn = CtP_logGamma_ff, mu = mu, sigma = sigma,
+                    method = method.optim,
+                    control = list(maxit = maxit),
+                    lower = lower, upper = upper)
+  return(CtP_optim)
+}
+
+MA_logGamma <- function(mu, sigma, start = NULL, method.optim = "L-BFGS-B",
+                         maxit = 200, lower = 0, upper = Inf){
+  if(is.null(start)) start <- mean(mu)
+  MA_logGamma_ff <- function(par, mu, sigma){
+    sp <- plnorm(par, meanlog = mu[1], sdlog = sigma[1])
+    se <- 1 - pgamma(par, shape = mu[2], rate = sigma[2])
+    return(log(sp) + log(se))
+  }
+  MA_optim <- optim(par = start, fn = MA_logGamma_ff, mu = mu, sigma = sigma,
+                     method = method.optim,
+                     control = list(maxit = maxit, fnscale = -1),
+                     lower = lower, upper = upper)
+  return(MA_optim)
+}
+```
+
+
+```{r}
+mu_logG_true_2 <- c(0, 3.6)
+sigma_logG_true_2 <- c(0.5, 1)
+```
+
+```{r}
+tau_logG_true_2 <- YI_logGamma(mu = mu_logG_true_2,
+                               sigma = sigma_logG_true_2)$par
+tau_logG_true_2
+```
+
+```{r}
+tau_CtP_logG_true_2 <- CtP_logGamma(mu = mu_logG_true_2,
+                                    sigma = sigma_logG_true_2)$par
+tau_CtP_logG_true_2
+```
+
+```{r}
+tau_MA_logG_true_2 <- MA_logGamma(mu = mu_logG_true_2,
+                                  sigma = sigma_logG_true_2)$par
+tau_MA_logG_true_2
+```
+
+```{r}
+sp_logG_true_2 <- plnorm(tau_logG_true_2, meanlog = mu_logG_true_2[1],
+                         sdlog = sigma_logG_true_2[1])
+se_logG_true_2 <- 1 - pgamma(tau_logG_true_2, shape = mu_logG_true_2[2],
+                             rate = sigma_logG_true_2[2])
+```
+
+```{r}
+sp_logG_true_2
+se_logG_true_2
+```
+
+```{r}
+sp_MA_logG_true_2 <- plnorm(tau_MA_logG_true_2, meanlog = mu_logG_true_2[1],
+                             sdlog = sigma_logG_true_2[1])
+se_MA_logG_true_2 <- 1 - pgamma(tau_MA_logG_true_2, shape = mu_logG_true_2[2],
+                                rate = sigma_logG_true_2[2])
+```
+
+```{r}
+sp_MA_logG_true_2
+se_MA_logG_true_2
+```
+
+```{r}
+n1 <- 50
+n2 <- 50
+```
+
+```{r}
+X1 <- rlnorm(n1, meanlog = mu_logG_true_2[1], sdlog = sigma_logG_true_2[1])
+X2 <- rgamma(n2, shape = mu_logG_true_2[2], rate = sigma_logG_true_2[2])
+```
+
+To obtain the optimal threshold and plot the confidence region for optimal sensitivity and specificity, we perform the following command:
+
+```{r}
+out1 <- threshold2(x = X1, y = X2, method = "YI", kernel_type = "gauss", 
+                   bwd_type = "AZZ", plot = TRUE)
+```
+
+```{r}
+out2 <- threshold2(x = X1, y = X2, method = "YI", kernel_type = "gauss", 
+                   bwd_type = "CV", plot = FALSE)
+```
+
+```{r}
+plot(out2)
+```
+
+
+```{r}
+out3 <- threshold2(x = X1, y = X2, method = "MA", kernel_type = "gauss",
+                   bwd_type = "CV", plot = TRUE)
+```
+
+Using formula
+
+```{r}
+data_test <- data.frame(biom = c(X1, X2), diag = rep(c("1", "2"), c(n1, n2)))
+```
+
+```{r}
+out4 <- threshold2(formula = biom ~ diag, data = data_test, method = "MA", 
+                   kernel_type = "gauss", bwd_type = "CV", plot = TRUE)
+```
+
+```{r}
+out4$ci_tau
+```
+
+
+The following codes are for verifying the coverage probability of EL confidence region for sensitivity and specificity at optimal threshold.
+```{r}
+term1 <- emplikDTA:::empi_llike_prepare(x = X1, y = X2, 
+                                        tau = tau_logG_true_2, 
+                                        type_F = "empi")
+term2 <- emplikDTA:::empi_llike_2C(term1, spe = sp_logG_true_2,
+                                   sen = se_logG_true_2)
+term2 < out1$c_alp
+```
+
+Run the following chunks interactively for the 1,000-replicate coverage study.
+
+```{r, eval=FALSE}
+out_cp_1 <- sapply(1:1000, function(i, n1, n2){
+  X1 <- rlnorm(n1, meanlog = mu_logG_true_2[1], sdlog = sigma_logG_true_2[1])
+  X2 <- rgamma(n2, shape = mu_logG_true_2[2], rate = sigma_logG_true_2[2])
+  term1 <- emplikDTA:::empi_llike_prepare(x = X1, y = X2, 
+                                          tau = tau_logG_true_2, 
+                                          type_F = "empi")
+  term2 <- emplikDTA:::empi_llike_2C(term1, spe = sp_logG_true_2,
+                                     sen = se_logG_true_2)
+  out1 <- threshold2(x = X1, y = X2, method = "YI", kernel_type = "gauss", 
+                     bwd_type = "AZZ", plot = FALSE, seed = i)
+  return(c(term2, out1$c_alp, term2 < out1$c_alp))
+}, n1 = 50, n2 = 50)
+```
+
+```{r, eval=FALSE}
+mean(out_cp_1[3,])
+```
+
+# Application to data
+
+

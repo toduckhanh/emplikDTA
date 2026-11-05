@@ -6,7 +6,7 @@ vignette: >
   %\VignetteIndexEntry{Guide for use vus and ROC_emp_surface function}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-output: html_document
+output: rmarkdown::html_vignette
 ---
 
 ```{r check pandoc, eval=TRUE, echo=FALSE}

@@ -1,26 +1,64 @@
 # emplikDTA
 
-## INTRODUCTION
-The R package emplikDTA
-This package implements the techniques for ROC surface analysis, in cases of clustered data and in presence of covariates. In particular, the package allows to obtain covariate-specific point and interval estimation for:
+Empirical likelihood inference for a continuous diagnostic marker in two or
+three independent ordered groups. Larger values indicate higher diagnostic
+classes. The current interfaces do not model clusters or covariates.
 
-  - [x] true class fractions (TCFs) at fixed pairs of thresholds;
-  - [x] the ROC surface;
-  - [x] the optimal pairs of thresholds;
-  - [x] the volume under ROC surface (VUS).
-  
-Methods considered for the first three quantities are proposed and discussed in [To et al. (2022)](https://doi.org/10.1177/09622802221089029). Referring to the third, three different selection criteria are implemented: Generalized Youden Index (GYI), Closest to Perfection (CtP) and Maximum Volume (MV). Methods considered for the last are proposed and discussed in [Xiong et al. (2018)](https://doi.org/10.1177/0962280217742539). Visualization tools are also provided. We refer readers to the articles cited above for all details.
+emplikDTA is licensed under GNU GPL version 2 or any later version.
 
-## INSTALLATION
+## Main functions
 
-The  latest release of package can be installed directly from CRAN by using the code below:
+| Task | Two groups | Three groups |
+| --- | --- | --- |
+| Overall accuracy and inference | `auc()` | `vus()` |
+| Empirical ROC estimation | `ROC_emp_curve()` | `ROC_emp_surface()` |
+| Optimal thresholds | `threshold2()` | `threshold3()` |
+| Middle-class accuracy at fixed outer fractions | — | `tcf2()` |
 
-    # Install latest release from CRAN
-    install.packages("emplikDTA")
+`geom_operating_point()` and `geom_confidence_region()` add layers to ROC
+curve plots. `CR_tcfs()` adds a joint confidence region at a fixed pair of
+thresholds to a ROC surface plot.
+`empi_llike_proj()` is an exported low-level likelihood helper.
 
-To install the latest development version from Github, you’ll need to do
-a source install. Those aren’t easy! Try
+## Install from source
 
-    # Install development version from Github
-    library(devtools)
-    install_github("toduckhanh/emplikDTA")
+From the package parent directory, run `R CMD INSTALL emplikDTA` with the
+package dependencies and a suitable C++ toolchain installed. Alternatively,
+install the development repository using:
+
+```r
+remotes::install_github("toduckhanh/emplikDTA")
+```
+
+## Example
+
+```r
+library(emplikDTA)
+set.seed(123)
+x <- rnorm(60)
+y <- rnorm(60, 1)
+z <- rnorm(60, 2)
+auc(x, y, B = 100, seed = 34)
+vus(x, y, z, B = 100, seed = 34)
+roc <- ROC_emp_curve(x, y, plot = FALSE)
+plot(roc)
+threshold2(x, y, method = "all", ci = FALSE)
+```
+
+Formula methods use `marker ~ group`. Supply `diag_levels` explicitly or
+set the factor levels in the required order; sample means do not reorder
+the groups. Handle missing values before calling vector methods. Bootstrap
+inference defaults to seed 34 and changes the global RNG state.
+
+## Documentation and development
+
+Use `help(package = "emplikDTA")` for the function index. Each public topic
+lists arguments, return values and implementation limitations. The
+[function review](docs/function-review.md) records unresolved code issues;
+the [helper guide](docs/function-reference.md) maps internal functions to
+source files and explains their contracts. Worked examples are in `vignettes/`.
+
+Regenerate help and S3 registrations with `roxygen2::roxygenise()` after
+editing roxygen comments. The threshold2 documentation comes from
+`R/optimal_threshold_2C.R`. Generated Rcpp wrappers must be updated
+through `Rcpp::compileAttributes()`, not edited manually.

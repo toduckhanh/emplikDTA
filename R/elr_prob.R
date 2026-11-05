@@ -18,3 +18,16 @@ ll_prob_adj <- function(theta, theta_est, r_adj, qc, n) {
   }
   return(ll_est_adj - qc)
 }
+
+.el_pvalue <- function(theta, theta_est, statistic, alternative) {
+  signed_root <- if (theta_est == theta) {
+    0
+  } else {
+    # The EL statistic is nonnegative, up to rounding near the null.
+    sign(theta_est - theta) * sqrt(max(0, statistic))
+  }
+  switch(alternative,
+         two.sided = 2 * pnorm(-abs(signed_root)),
+         less = pnorm(signed_root),
+         greater = pnorm(signed_root, lower.tail = FALSE))
+}

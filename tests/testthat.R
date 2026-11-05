@@ -1,6 +1,5 @@
+options(rgl.useNULL = TRUE)
 library(testthat)
 library(emplikDTA)
-library(rgl)
 
-options(rgl.useNULL = TRUE)
 test_check("emplikDTA")

@@ -23,9 +23,9 @@ plot_auc <- function(auc_est, r_est, ci_level, n, ci) {
   df <- data.frame(auc = xgrid, elr = exp(-0.5 * ll))
   df$inside_ci <- df$auc >= ci[1] & df$auc <= ci[2]
   cutoff <- exp(-0.5 * qchisq(ci_level, 1))
-  p <- ggplot(data = df, mapping = aes(x = auc, y = elr)) +
+  p <- ggplot(data = df, mapping = aes(x = .data$auc, y = .data$elr)) +
     geom_line(linewidth = 0.75) +
-    geom_ribbon(data = df[df$inside_ci, ], mapping = aes(ymin = 0, ymax = elr),
+    geom_ribbon(data = df[df$inside_ci, ], mapping = aes(ymin = 0, ymax = .data$elr),
                 alpha = 0.2) +
     geom_vline(xintercept = ci, linetype = "dashed") +
     geom_vline(xintercept = auc_est, color = "blue", linewidth = 0.75) +
@@ -46,27 +46,92 @@ plot_auc <- function(auc_est, r_est, ci_level, n, ci) {
 #' in two-class setting, together with a confidence interval.
 #' 
 #' 
-#' @details ....
-#' 
-#' 
-#' @return \code{auc} returns an object of class "auc" which is a list containing at least the following components:
+#' @details Supply independent samples ordered by increasing marker values,
+#' with missing values handled before calling the default method. The formula
+#' interface uses \code{marker ~ group} with exactly two groups.
+#' The empirical estimate accounts for ties. Bootstrap resampling is performed
+#' independently within groups. The likelihood statistic is scaled by
+#' \code{qchisq(0.5, 1) / median(r.bts)}, and the confidence limits are found
+#' by inversion using a chi-squared cutoff with one degree of freedom.
+#' If the empirical estimate is zero or one, the function returns early without
+#' inference; an estimate of one is adjusted to \code{1 / (1 + 0.5 / n1 / n2)}.
+#' An unbracketed confidence limit is returned as \code{NA}.
+#'
+#' @section P-value calculation:
+#' Let \eqn{\theta}{theta} be the AUC, \eqn{\hat{\theta}}{theta_hat}
+#' its empirical estimate, and \eqn{\theta_0}{theta0} the null value
+#' (\code{auc0}). For total sample size \eqn{n}, the empirical likelihood (EL)
+#' statistic at the null is returned as \code{ll.value} and equals
+#' \deqn{D_0 = 2n \left[\hat{\theta}\log\frac{\hat{\theta}}{\theta_0}
+#'   + (1-\hat{\theta})\log\frac{1-\hat{\theta}}{1-\theta_0}\right].}{
+#'   D0 = 2*n*[theta_hat*log(theta_hat/theta0) +
+#'   (1-theta_hat)*log((1-theta_hat)/(1-theta0))].}
+#' The test uses the signed root of the bootstrap-adjusted EL statistic
+#' \deqn{R = \mathrm{sign}(\hat{\theta}-\theta_0)\sqrt{rD_0},}{
+#'   R = sign(theta_hat - theta0) * sqrt(r * D0),}
+#' where \eqn{r} is the bootstrap scale factor returned as \code{r.adj}.
+#' The function sets \eqn{R=0}{R = 0} at equality and truncates negative
+#' values of \eqn{rD_0}{r * D0} caused by rounding to zero before taking the
+#' square root.
+#'
+#' Under \eqn{H_0:\theta=\theta_0}{H0: theta = theta0}, the test uses
+#' the standard normal approximation for the signed root (DiCiccio and
+#' Romano, 1989). With \eqn{\Phi}{Phi} denoting the standard normal
+#' cumulative distribution function, \code{p.value} is computed as follows.
+#' \describe{
+#'   \item{\code{alternative = "greater"}}{\eqn{1-\Phi(R)}{1 - Phi(R)}
+#'     for \eqn{\theta>\theta_0}{theta > theta0}.}
+#'   \item{\code{alternative = "less"}}{\eqn{\Phi(R)}{Phi(R)}
+#'     for \eqn{\theta<\theta_0}{theta < theta0}.}
+#'   \item{\code{alternative = "two.sided"}}{\eqn{2\Phi(-|R|)}{2 * Phi(-abs(R))}
+#'     for \eqn{\theta\ne\theta_0}{theta != theta0}. This equals the upper
+#'     tail probability of a chi-squared distribution with one degree of
+#'     freedom evaluated at \eqn{R^2}{R^2}.}
+#' }
+#' @return \code{auc} returns an object of class "auc" which is a list
+#' containing the following components:
 #'
 #' \item{call}{the matched call.}
-#' \item{estimate}{the estimated VUS.}
-#' \item{conf.int}{a confidence interval for the AUC.}
-#' \item{p.value}{the p-value for the test.}
-#' \item{r.adj}{the value of adjusted pamarameter.}
+#' \item{estimate}{the estimated AUC.}
+#' \item{n}{Named vector of group sizes, \code{n1} and \code{n2}.}
+#' \item{alternative}{the alternative hypothesis used for the test.}
+#'
+#' For interior estimates, the list also contains:
+#'
+#' \item{conf.int}{a two-sided confidence interval for the AUC.}
+#' \item{p.value}{the p-value for testing AUC equal to \code{auc0}
+#' against the specified alternative.}
+#' \item{ll.value}{Unadjusted empirical likelihood statistic at \code{auc0}.}
+#' \item{r.bts}{Bootstrap empirical likelihood statistics.}
+#' \item{r.adj}{the value of bootstrap adjustment factor.}
 #' \item{ci_level}{confidence level of the interval.}
 #'
-#' Generic functions such as \code{print} is also used to show the results.
+#' Inference components are absent for boundary estimates. The formula method
+#' additionally returns:
+#'
+#' \item{formula}{The supplied formula.}
+#'
+#' Group-label metadata are currently not retained. The \code{print} method
+#' displays the results and returns the object invisibly.
 #' 
 #' 
 #' @references
+#' DiCiccio, T. J., & Romano, J. P. (1989).
+#' On adjustments based on the signed root of the empirical likelihood ratio
+#' statistic. \emph{Biometrika}, \bold{76}(3), 447--456.
+#' \doi{10.1093/biomet/76.3.447}.
+#'
 #' To, D. K., Adimari, G., & Chiogna, M. (2024). 
 #' Interval estimation in three-class receiver operating characteristic analysis: 
 #' A fairly general approach based on the empirical likelihood. 
 #' \emph{Statistical Methods in Medical Research}, \bold{33}, 5, 875-893.
 #' 
+#' @examples
+#' set.seed(123)
+#' x <- rnorm(60)
+#' y <- rnorm(60, 1)
+#' fit <- auc(x, y, B = 100, seed = 34)
+#' summary(fit)
 #'@export
 auc <- function(x, ...) {
   UseMethod("auc")
@@ -76,17 +141,24 @@ auc <- function(x, ...) {
 #' @param x,y numeric vectors (default method) contains values of diagnostic test (biomarker)
 #' corresponding to the first and second class of disease. The ordering is intended 
 #' to be ``increasing'' with respect to the disease severity.
-#' @param auc0 a number indicating the true value of the AUC.
+#' @param auc0 the null-hypothesis value of the AUC, defaulting to \code{1/2}.
 #' @param ci_level a confidence level to be used for constructing the confidence interval; 
 #' default is 0.95.
 #' @param B the number of bootstrap replicates (default: 500).
-#' @param seed the value of \code{.Random.seed} when bootstrap started work.
+#' @param seed Integer passed to \code{set.seed}; defaults to 34 when omitted.
+#' This changes the global random-number generator state.
 #' @param plot a logical indicating whether you want to plot empirical likelihood ratio
 #' and confidence interval for AUC.
+#' @param alternative The alternative hypothesis. Use \code{"greater"} (default)
+#' to test whether AUC is above \code{auc0}, \code{"less"} to test whether
+#' it is below, or \code{"two.sided"} to test whether it differs.
 #' @exportS3Method
 auc.default <- function(x, y, auc0 = 1/2, ci_level = 0.95, B = 500, seed,
-                        plot = FALSE) {
+                        plot = FALSE, alternative = c("greater", "less", "two.sided"),
+                        ...) {
+  rlang::check_dots_empty()
   call <- match.call()
+  alternative <- match.arg(alternative)
   .check_numeric(x, "x")
   .check_numeric(y, "y")
   .check_ci(ci_level)
@@ -97,7 +169,8 @@ auc.default <- function(x, y, auc0 = 1/2, ci_level = 0.95, B = 500, seed,
   n2 <- length(y)
   n  <- n1 + n2
   auc_est <- auc_core(x, y)
-  out <- list(estimate = auc_est, n = c(n1 = n1, n2 = n2), call = call)
+  out <- list(estimate = auc_est, n = c(n1 = n1, n2 = n2), call = call,
+              alternative = alternative)
   if (auc_est == 1) {
     out$estimate <- auc_est / (1 + 0.5 / n1 / n2)
     class(out) <- "auc"
@@ -126,7 +199,7 @@ auc.default <- function(x, y, auc0 = 1/2, ci_level = 0.95, B = 500, seed,
   }
   ## p-value
   ll_0 <- ll_prob(theta = auc0, theta_est = auc_est, n = n)
-  p_val <- pchisq(r_est * ll_0, df = 1, lower.tail = FALSE)
+  p_val <- .el_pvalue(auc0, auc_est, r_est * ll_0, alternative)
   ##
   out$conf.int <- ci
   out$p.value <- p_val
@@ -141,24 +214,24 @@ auc.default <- function(x, y, auc0 = 1/2, ci_level = 0.95, B = 500, seed,
 #' @rdname auc
 #' @param formula an object of class "\code{\link[stats]{formula}}" (or one that can be coerced 
 #' to that class): a symbolic description of the model to be fitted. 
-#' The details of model specification are given under ‘Details’.
+#' The details of model specification are given under 'Details'.
 #' @param data a data frame containing the variables in the formula.
 #' @param diag_levels a vector (of strings) containing the ordered name chosen for 
 #' the disease classes. The ordering is intended to be ``increasing'' with respect to the 
 #' disease severity. If \code{diag_levels = NULL} (default), the elements of the vector 
-#' will be automatically determined from data, by considering the order of the means 
-#' of the test values for each disease class (diagnostic group).
+#' follow the factor levels of the grouping variable (or the levels produced by
+#' coercing it to a factor). Groups are not reordered by their sample means.
 #' @param subset an optional expression indicating the subset of the rows of data 
 #' that should be used in the fit. This can be a logical vector, or a numeric vector
 #' indicating which observation numbers are to be included, or a character vector of 
 #' the row names to be included. All observations are included by default.
 #' @param na.action a function which indicates what should happen when the data contain \code{NA}s. 
 #' The default is set by the \code{na.action} setting of \code{\link[base]{options}}, and is 
-#' \code{\link[stats]{na.fail}} if that is unset. The ‘factory-fresh’ default is 
+#' \code{\link[stats]{na.fail}} if that is unset. The 'factory-fresh' default is 
 #' \code{\link[stats]{na.omit}}. Another possible value is \code{NULL}, no action. 
 #' Value \code{\link[stats]{na.exclude}} can be useful.
 #' @param ... for formula method: additional arguments to be passed to the \code{\link[emplikDTA]{auc}}
-#' i.e., \code{auc0}, \code{ci_level}, \code{B}, \code{plot}.
+#' such as \code{auc0}, \code{ci_level}, \code{B}, \code{plot}, and \code{alternative}.
 #' @exportS3Method
 auc.formula <- function(formula, data, diag_levels = NULL, subset, 
                         na.action, ...) {
@@ -206,16 +279,19 @@ print.auc <- function(x, ...) {
     print(x$conf.int)
   }
   if (!is.null(x$p.value)) {
-    cat("\n p-value:", x$p.value, "\n")
+    label <- if (is.null(x$alternative)) "p-value" else paste0("p-value (", x$alternative, ")")
+    cat("\n", label, ": ", x$p.value, "\n", sep = "")
   }
   invisible(x)
 }
 
 #' @rdname auc
+#' @param object An object of class \code{auc} to summarise.
 #' @export
 summary.auc <- function(object, ...) {
   out <- list(estimate = object$estimate, conf.int = object$conf.int,
               p.value = object$p.value, n = object$n)
+  out$alternative <- object$alternative
   class(out) <- "summary.auc"
   out
 }

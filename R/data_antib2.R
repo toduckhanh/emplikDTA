@@ -1,0 +1,36 @@
+#' COVID-19 Antibody Titers After the Second BNT162b2 Dose
+#'
+#' Serum IgG titers against the receptor-binding domain (RBD) of SARS-CoV-2
+#' in 100 healthcare workers. Samples were collected approximately two weeks
+#' after the second dose of the Pfizer--BioNTech BNT162b2 mRNA vaccine.
+#'
+#' @name antib2
+#' @aliases data_antib2
+#' @docType data
+#' @usage data(antib2)
+#' @format
+#' A data frame named \code{data_antib2} with 100 rows and two columns.
+#' \describe{
+#'   \item{\code{antib2}}{Numeric RBD-specific IgG titer in arbitrary units
+#'     per milliliter (AU/mL).}
+#'   \item{\code{status}}{Numeric indicator of prior SARS-CoV-2 infection.
+#'     \code{0} denotes infection-negative (58 workers) and \code{1} denotes
+#'     infection-positive (42 workers).}
+#' }
+#'
+#' @source
+#' COVID-19 antibody data from the Supporting Information of Bantis et al. (2024).
+#'
+#' @references
+#' Bantis, L. E., Brewer, B., Nakas, C. T., and Reiser, B. (2024).
+#' Statistical Inference for Box--Cox based Receiver Operating Characteristic
+#' Curves. \emph{Statistics in Medicine}, 43(30), 6099--6122.
+#' \doi{10.1002/sim.10252}.
+#'
+#' @examples
+#' data(antib2)
+#' summary(data_antib2$antib2)
+#' table(data_antib2$status)
+#'
+#' @keywords datasets
+NULL

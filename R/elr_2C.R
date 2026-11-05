@@ -1,6 +1,6 @@
 # empirical likelihood ratio function for (Se, Sp) ----
-.empi_llike_prepare <- function(x, y, tau,
-                                type_F = c("empi", "Adi", "Adi_ties")) {
+empi_llike_prepare <- function(x, y, tau,
+                               type_F = c("empi", "Adi", "Adi_ties")) {
   type_F <- match.arg(type_F)
   r1 <- range(x)
   r2 <- range(y)
@@ -28,27 +28,3 @@ empi_llike_2C <- function(obj, spe, sen) {
   }
   return(ll)
 }
-
-# empi_llike_2C <- function(x, y, n1, n2, spe, sen, tau,
-#                           type_F = c("empi", "Adi", "Adi_ties")) {
-#   ll <- Inf
-#   r1 <- range(x)
-#   r2 <- range(y)
-#   ckt11 <- as.numeric(tau >= r1[1] & tau <= r1[2])
-#   ckt12 <- as.numeric(tau >= r2[1] & tau <= r2[2])
-#   if(ckt11 & ckt12){
-#     type_F <- match.arg(type_F)
-#     F1_tau <- switch(type_F,
-#                      empi = mean(x <= tau),
-#                      Adi = Fs(x, tau),
-#                      Adi_ties = Fs_ties(x, tau)
-#                      )
-#     F2_tau <- switch(type_F,
-#                      empi = mean(y <= tau),
-#                      Adi = Fs(y, tau),
-#                      Adi_ties = Fs_ties(y, tau)
-#                      )
-#     
-#   }
-#   return(ll)
-# }

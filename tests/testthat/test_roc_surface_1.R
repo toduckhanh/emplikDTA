@@ -23,25 +23,9 @@ test_that("ROC_emp_surface returns an empirical ROC surface object", {
   expect_equal(dim(out$tcf3), c(9, 9))
 })
 
-test_that("ROC_emp_surface_2 returns mesh data", {
-  out <- ROC_emp_surface_2(X1, X2, X3, ncp = 10, plot = FALSE)
+test_that("CR_tcfs adds a region to the fitted ROC surface", {
+  out <- ROC_emp_surface(1:10, 3:12, 5:14, ncp = 10)
+  on.exit(rgl::close3d())
 
-  expect_s3_class(out, "ROC_emp_surface")
-  expect_true(is.matrix(out$vertices))
-  expect_true(is.matrix(out$triangles))
-  expect_equal(nrow(out$vertices), 4)
-  expect_equal(ncol(out$triangles), 3)
-
-  xyz <- t(out$vertices[1:3, ])
-  area <- apply(out$triangles, 1, function(id) {
-    v1 <- xyz[id[2], ] - xyz[id[1], ]
-    v2 <- xyz[id[3], ] - xyz[id[1], ]
-    cross_prod <- c(
-      v1[2] * v2[3] - v1[3] * v2[2],
-      v1[3] * v2[1] - v1[1] * v2[3],
-      v1[1] * v2[2] - v1[2] * v2[1]
-    )
-    sqrt(sum(cross_prod^2)) / 2
-  })
-  expect_true(all(area > 0))
+  expect_identical(CR_tcfs(out, cpts = c(5, 9), fill = TRUE), out)
 })

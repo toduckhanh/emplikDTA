@@ -6,7 +6,7 @@ vignette: >
   %\VignetteIndexEntry{Guide for making ROC surface}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-output: html_document
+output: rmarkdown::html_vignette
 ---
 
 ```{r check pandoc, eval=TRUE, echo=FALSE}
@@ -20,8 +20,10 @@ if (!requireNamespace("rmarkdown", quietly = TRUE) ||
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(rgl.useNULL = TRUE)
 library(emplikDTA)
 library(rgl)
+set.seed(34)
 ```
 
 
@@ -42,7 +44,8 @@ X3 <- rnorm(n3, mu_true[3], sigma_true[3])
 ## Plot ROC surface
 
 ```{r}
-out_roc_surface <- ROC_emp_surface(X1, X2, X3, color = "steelblue", alpha = 0.5)
+out_roc_surface <- ROC_emp_surface(X1, X2, X3, ncp = 35,
+                                   color = "steelblue", alpha = 0.5)
 rgl::rglwidget(
     width = 800,
     height = 800
@@ -53,6 +56,7 @@ rgl::rglwidget(
 ```{r}
 CR_tcfs(out_roc_surface, cpts = c(0.5, 3.4), fill = TRUE)
 rgl::rglwidget(width = 800, height = 800)
+rgl::close3d()
 ```
 
 
@@ -62,7 +66,7 @@ data_test <- data.frame(biom = c(X1, X2, X3),
 ```
 
 ```{r}
-out_roc_surface_2 <- ROC_emp_surface(formula = biom ~ diag, data = data_test, 
+out_roc_surface_2 <- ROC_emp_surface(formula = biom ~ diag, data = data_test, ncp = 35,
                                      color = "steelblue", alpha = 0.5)
 rgl::rglwidget(
     width = 800,
@@ -72,8 +76,17 @@ rgl::rglwidget(
 
 
 
-```{r}
+The formula fit supports the same confidence region. Run this chunk
+interactively to add it to the formula-based plot.
+
+```{r, eval=FALSE}
+plot(out_roc_surface_2)
 CR_tcfs(out_roc_surface_2, cpts = c(0.5, 3.4), fill = TRUE)
 rgl::rglwidget(width = 800, height = 800)
+rgl::close3d()
+```
+
+```{r, include=FALSE}
+rgl::close3d()
 ```
 
