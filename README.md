@@ -58,7 +58,3 @@ lists arguments, return values and implementation limitations. The
 the [helper guide](docs/function-reference.md) maps internal functions to
 source files and explains their contracts. Worked examples are in `vignettes/`.
 
-Regenerate help and S3 registrations with `roxygen2::roxygenise()` after
-editing roxygen comments. The threshold2 documentation comes from
-`R/optimal_threshold_2C.R`. Generated Rcpp wrappers must be updated
-through `Rcpp::compileAttributes()`, not edited manually.
