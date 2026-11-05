@@ -3,7 +3,7 @@ title: "Three-class ROC analysis with ADNeuro"
 author: "Duc-Khanh To"
 date: '`r Sys.Date()`'
 vignette: >
-  %\VignetteIndexEntry{Guide using threshold3 function}
+  %\VignetteIndexEntry{Three-class ROC analysis with ADNeuro}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 output: rmarkdown::html_vignette

@@ -3,7 +3,7 @@ title: "ROC Analysis with the antib2 Data"
 author: "Duc-Khanh To"
 date: '`r Sys.Date()`'
 vignette: >
-  %\VignetteIndexEntry{Guide using threshold3 function}
+  %\VignetteIndexEntry{ROC Analysis with the antib2 Data}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 output: rmarkdown::html_vignette

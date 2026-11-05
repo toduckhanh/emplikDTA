@@ -16,7 +16,7 @@ ROC_emp_curve(x, ...)
 \method{plot}{ROC_emp_curve}(x, color = "steelblue", linewidth = 1, ...)
 }
 \arguments{
-\item{x, }{y numeric vectors (default method) contains values of diagnostic test (biomarker)
+\item{x, y}{numeric vectors (default method) contains values of diagnostic test (biomarker)
 corresponding to the first and second class of disease. The ordering is intended 
 to be ``increasing'' with respect to the disease severity.}
 
