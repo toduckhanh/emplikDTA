@@ -1,0 +1,140 @@
+---
+title: "ROC Analysis with the antib2 Data"
+author: "Duc-Khanh To"
+date: '`r Sys.Date()`'
+vignette: >
+  %\VignetteIndexEntry{Guide using threshold3 function}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+output: rmarkdown::html_vignette
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6,
+                      fig.height = 5, fig.align = "center")
+```
+
+## Prepare the data
+
+The dataset contains RBD-specific IgG titers measured after the second dose of the BNT162b2 vaccine. The `status` variable records prior SARS-CoV-2 infection. The reference-negative group (`0`) includes 58 participants with no prior infection, and the reference-positive group (`1`) includes 42 participants with prior infection. The classification rule treats a titer above the threshold as positive. The `diag_levels` argument lists the reference-negative group first and the reference-positive group second.
+
+```{r data}
+library(emplikDTA)
+data("antib2", package = "emplikDTA")
+
+table(data_antib2$status)
+group_order <- c("0", "1")
+
+# Use thousands of AU/mL to improve numerical scaling for threshold optimization.
+antib <- transform(data_antib2, titer_kAU = antib2 / 1000)
+```
+
+Rescaling preserves the ordering of the titers and therefore the empirical ROC curve and AUC. The threshold and its confidence interval are reported in AU/mL.
+
+## 1. Plot the empirical ROC curve with `ROC_emp_curve()`
+
+At each threshold, specificity (`sp`) is the proportion of the reference-negative group with titers at or below the threshold. Sensitivity (`se`) is the proportion of the reference-positive group with titers above the threshold. The ROC curve plots the false positive rate $1 - \mathrm{Sp}$ on the horizontal axis and sensitivity $\mathrm{Se}$ on the vertical axis. The `ncp` argument sets the number of thresholds used to draw the curve.
+
+```{r roc}
+roc_fit <- ROC_emp_curve(
+  titer_kAU ~ status, data = antib, diag_levels = group_order,
+  ncp = 1000, plot = FALSE
+)
+
+roc_plot <- plot(roc_fit) +
+  ggplot2::labs(title = "Empirical ROC curve for IgG titers")
+roc_plot
+```
+
+## 2. Estimate the area under the ROC curve with `auc()`
+
+The AUC is the probability that a randomly selected participant from the reference-positive group has a higher titer than one from the reference-negative group, plus half the probability of a tie. `auc()` estimates the AUC from the observations and computes a bootstrap-adjusted empirical likelihood (EL) confidence interval. With `auc0 = 0.5` and `alternative = "greater"`, `p.value` tests $H_0: \mathrm{AUC} = 0.5$ against $H_1: \mathrm{AUC} > 0.5$.
+
+```{r auc}
+auc_fit <- auc(
+  titer_kAU ~ status, data = antib, diag_levels = group_order,
+  auc0 = 0.5, ci_level = 0.95, B = 500, seed = 34, alternative = "greater"
+)
+print(auc_fit)
+```
+
+## 3. Compare optimal thresholds with `threshold2()`
+
+Set `method = "all"` to fit the three criteria in one call. Each criterion uses the same Gaussian kernel bandwidths selected by cross-validation and the same 1,000 bootstrap resamples.
+
+- **YI** maximizes Youden's index $\mathrm{Sp} + \mathrm{Se} - 1$.
+- **CtP** minimizes the distance from $(1 - \mathrm{Sp}, \mathrm{Se})$ to the upper-left corner $(0, 1)$ of the ROC plot.
+- **MA** maximizes the product $\mathrm{Sp}\,\mathrm{Se}$.
+
+With `ci = TRUE`, each fit includes a bootstrap percentile confidence interval for its threshold and a bootstrap-calibrated joint empirical likelihood (EL) region for specificity and sensitivity. The seed makes the bootstrap reproducible.
+
+```{r thresholds}
+opt_fit <- threshold2(
+  titer_kAU ~ status, data = antib, diag_levels = group_order,
+  method = "all", kernel_type = "gauss", bwd_type = "CV",
+  ci = TRUE, ci_level = 0.95, B = 1000, seed = 34
+)
+
+thresholds <- opt_fit$summary
+knitr::kable(
+  data.frame(
+    Criterion = thresholds$method,
+    Threshold = 1000 * thresholds$opt_thresh,
+    Lower = 1000 * thresholds$ci_tau_lower,
+    Upper = 1000 * thresholds$ci_tau_upper,
+    Specificity = thresholds$spe_opt,
+    Sensitivity = thresholds$sen_opt
+  ),
+  digits = c(0, 1, 1, 1, 3, 3),
+  caption = "Thresholds and 95% bootstrap intervals in AU/mL, with kernel estimates of specificity and sensitivity."
+)
+```
+
+YI selects a lower threshold than CtP and MA, with higher estimated sensitivity and lower estimated specificity. Its bootstrap interval for the threshold is also wider. CtP and MA select similar thresholds.
+
+## 4. Compare the joint confidence regions on the ROC curve
+
+The individual fits are stored in `opt_fit$results`, for example `opt_fit$results$YI`. For each criterion, `spe_sen_emp` gives the empirical operating point at the estimated threshold, `grid_sen_spe` stores the EL statistic `z`, and `c_alp` gives the bootstrap-calibrated cutoff. The plot uses the zero contour of `z - c_alp` to draw each criterion's region on the same ROC axes. The 95% level applies to each region separately.
+
+```{r operating-points}
+operating_points <- do.call(rbind, lapply(opt_fit$results, function(fit) {
+  data.frame(
+    method = fit$method,
+    FPR = 1 - unname(fit$spe_sen_emp["sp"]),
+    TPR = unname(fit$spe_sen_emp["se"]),
+    EL_cutoff = fit$c_alp
+  )
+}))
+
+knitr::kable(
+  operating_points, row.names = FALSE, digits = 3,
+  col.names = c("Criterion", "Empirical FPR", "Empirical sensitivity", "EL cutoff")
+)
+```
+
+```{r roc-regions, fig.width=9, fig.height=3.8}
+criteria <- names(opt_fit$results)
+operating_points$method <- factor(operating_points$method, levels = criteria)
+
+el_grid <- do.call(rbind, lapply(opt_fit$results, function(fit) {
+  grid <- subset(fit$grid_sen_spe, is.finite(z))
+  transform(grid, method = factor(fit$method, levels = criteria),
+            centered_el = z - fit$c_alp)
+}))
+
+roc_plot +
+  ggplot2::geom_contour(
+    data = el_grid,
+    mapping = ggplot2::aes(x = 1 - Spe, y = Sen, z = centered_el),
+    breaks = 0, inherit.aes = FALSE, colour = "firebrick", linewidth = 0.9
+  ) +
+  ggplot2::geom_point(
+    data = operating_points, mapping = ggplot2::aes(x = FPR, y = TPR),
+    inherit.aes = FALSE, colour = "firebrick", size = 2.5
+  ) +
+  ggplot2::facet_wrap(ggplot2::vars(method), nrow = 1) +
+  ggplot2::theme(panel.spacing.x = grid::unit(1.5, "lines")) +
+  ggplot2::labs(subtitle = "Empirical operating points and 95% joint EL regions")
+```
+
+On these data, CtP and MA give the same empirical operating point even though their fitted thresholds differ. YI has a much wider joint region, consistent with the greater variability of its estimated threshold across the shared bootstrap samples.

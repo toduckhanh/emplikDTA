@@ -4,16 +4,19 @@
 \alias{ROC_emp_curve}
 \alias{ROC_emp_curve.default}
 \alias{ROC_emp_curve.formula}
+\alias{plot.ROC_emp_curve}
 \title{Empirical ROC curve estimation and Empirical Likelihood Inference for ROC curve}
 \usage{
 ROC_emp_curve(x, ...)
 
-\method{ROC_emp_curve}{default}(x, y, ncp = 150, main, color = "steelblue", plot = TRUE)
+\method{ROC_emp_curve}{default}(x, y, ncp = 150, main, color = "steelblue", plot = TRUE, ...)
 
 \method{ROC_emp_curve}{formula}(formula, data, diag_levels = NULL, subset, na.action, ...)
+
+\method{plot}{ROC_emp_curve}(x, color = "steelblue", linewidth = 1, ...)
 }
 \arguments{
-\item{x, y}{numeric vectors (default method) contains values of diagnostic test (biomarker)
+\item{x, }{y numeric vectors (default method) contains values of diagnostic test (biomarker)
 corresponding to the first and second class of disease. The ordering is intended 
 to be ``increasing'' with respect to the disease severity.}
 
@@ -35,15 +38,15 @@ producing a graphical display.}
 
 \item{formula}{an object of class "\code{\link[stats]{formula}}" (or one that can be coerced 
 to that class): a symbolic description of the model to be fitted. 
-The details of model specification are given under ‘Details’.}
+The details of model specification are given under 'Details'.}
 
 \item{data}{a data frame containing the variables in the formula.}
 
 \item{diag_levels}{a vector (of strings) containing the ordered name chosen for 
 the disease classes. The ordering is intended to be ``increasing'' with respect to the 
 disease severity. If \code{diag_levels = NULL} (default), the elements of the vector 
-will be automatically determined from data, by considering the order of the means 
-of the test values for each disease class (diagnostic group).}
+follow the factor levels of the grouping variable (or the levels produced by
+coercing it to a factor). Groups are not reordered by their sample means.}
 
 \item{subset}{an optional expression indicating the subset of the rows of data 
 that should be used in the fit. This can be a logical vector, or a numeric vector
@@ -52,28 +55,46 @@ the row names to be included. All observations are included by default.}
 
 \item{na.action}{a function which indicates what should happen when the data contain \code{NA}s. 
 The default is set by the \code{na.action} setting of \code{\link[base]{options}}, and is 
-\code{\link[stats]{na.fail}} if that is unset. The ‘factory-fresh’ default is 
+\code{\link[stats]{na.fail}} if that is unset. The 'factory-fresh' default is 
 \code{\link[stats]{na.omit}}. Another possible value is \code{NULL}, no action. 
 Value \code{\link[stats]{na.exclude}} can be useful.}
+
+\item{linewidth}{Line width for the curve plot.}
 }
 \value{
 \code{ROC_emp_curve} returns an object of class "ROC_emp_curve" which 
 is a list containing at least the following components:
 
 \item{call}{the matched call.}
-\item{ROCpoint}{the estimated ROC curve: a matrix with two columns named Specificity and
-Sensitivity.}
-\item{cutpoints}{a vector of cutpoints.}
+\item{n,ncp}{Group sizes and number of grid thresholds.}
+\item{x,y}{Original group samples.}
+\item{vals}{Matrix with columns Spe (specificity) and Sen (sensitivity).}
+\item{cutpoints}{Vector of thresholds.}
 
-Generic functions such as \code{plot} is also used to make a plot of ROC surface
+Generic functions such as \code{plot} is also used to make a plot of ROC curve
  with \code{ggplot2} style.
+
+The plot method returns a ggplot object.
 }
 \description{
 This function estimates the ROC curve of a continuous diagnostic test (biomarker) 
 in two-class setting.
 }
 \details{
-....
+Specificity is \eqn{P(X \le t)} and sensitivity is \eqn{P(Y > t)}. 
+The plot uses false positive rate (1 - specificity) on the horizontal axis. 
+Use \code{geom_confidence_region} for a fixed-threshold EL region.
+The grid contains minus and plus infinity and ncp - 2 equally spaced
+points over the pooled range. The formula is \code{marker ~ group}.
+The default methods return the fitted object invisibly.
+}
+\examples{
+set.seed(123)
+x <- rnorm(40, 0, 1)
+y <- rnorm(40, 1, 1)
+fit <- ROC_emp_curve(x, y, ncp = 30, plot = FALSE)
+head(fit$vals)
+plot(fit) + geom_operating_point(fit, cpt = 0.5)
 }
 \references{
 To, D. K., Adimari, G., & Chiogna, M. (2024). 

@@ -2,12 +2,11 @@
 % Please edit documentation in R/ROC_emp_surface.R
 \name{ROC_emp_surface}
 \alias{ROC_emp_surface}
-\alias{ROC_emp_curve}
-\alias{ROC_emp_curve.default}
-\alias{ROC_emp_curve.formula}
 \alias{ROC_emp_surface.default}
 \alias{ROC_emp_surface.formula}
-\title{Empirical ROC curve estimation and Empirical Likelihood Inference for ROC curve}
+\alias{plot.ROC_emp_surface}
+\alias{print.ROC_emp_surface}
+\title{Empirical ROC surface estimation}
 \usage{
 ROC_emp_surface(x, ...)
 
@@ -24,6 +23,18 @@ ROC_emp_surface(x, ...)
 )
 
 \method{ROC_emp_surface}{formula}(formula, data, diag_levels = NULL, subset, na.action, ...)
+
+\method{plot}{ROC_emp_surface}(
+  x,
+  main = "Empirical ROC surface",
+  color = "steelblue",
+  alpha = 0.5,
+  new_window = TRUE,
+  add = FALSE,
+  ...
+)
+
+\method{print}{ROC_emp_surface}(x, ...)
 }
 \arguments{
 \item{x, y, z}{numeric vectors (default method) contains values of diagnostic tests (biomarkers)
@@ -38,7 +49,7 @@ and \code{plot}.}
 the empirical ROC surface. Larger values produce a smoother approximation at
 the expense of additional computation.}
 
-\item{main}{a character string giving the title of the plot.}
+\item{main}{Requested plot title; currently accepted but not drawn.}
 
 \item{color}{a character string specifying the color of the ROC surface.}
 
@@ -50,15 +61,15 @@ producing a graphical display.}
 
 \item{formula}{an object of class "\code{\link[stats]{formula}}" (or one that can be coerced 
 to that class): a symbolic description of the model to be fitted. 
-The details of model specification are given under ‘Details’.}
+The details of model specification are given under 'Details'.}
 
 \item{data}{a data frame containing the variables in the formula.}
 
 \item{diag_levels}{a vector (of strings) containing the ordered name chosen for 
 the disease classes. The ordering is intended to be ``increasing'' with respect to the 
 disease severity. If \code{diag_levels = NULL} (default), the elements of the vector 
-will be automatically determined from data, by considering the order of the means 
-of the test values for each disease class (diagnostic group).}
+follow the factor levels of the grouping variable (or the levels produced by
+coercing it to a factor). Groups are not reordered by their sample means.}
 
 \item{subset}{an optional expression indicating the subset of the rows of data 
 that should be used in the fit. This can be a logical vector, or a numeric vector
@@ -67,27 +78,51 @@ the row names to be included. All observations are included by default.}
 
 \item{na.action}{a function which indicates what should happen when the data contain \code{NA}s. 
 The default is set by the \code{na.action} setting of \code{\link[base]{options}}, and is 
-\code{\link[stats]{na.fail}} if that is unset. The ‘factory-fresh’ default is 
+\code{\link[stats]{na.fail}} if that is unset. The 'factory-fresh' default is 
 \code{\link[stats]{na.omit}}. Another possible value is \code{NULL}, no action. 
 Value \code{\link[stats]{na.exclude}} can be useful.}
+
+\item{new_window}{Open a new rgl window when not adding to a scene.}
+
+\item{add}{Add the surface to the current scene.}
 }
 \value{
 \code{ROC_emp_surface} returns an object of class "ROC_emp_surface" which 
 is a list containing at least the following components:
 
 \item{call}{the matched call.}
-\item{ROCpoint}{the estimated ROC surface: a matrix with three columns named TCF1, TCF2 and TCF3.}
-\item{cutpoints}{a matrix of the pair of cutpoints.}
+\item{n,ncp}{Group sizes and number of grid thresholds.}
+\item{x,y,z}{Original group samples.}
+\item{vals}{Matrix with columns TCF1, TCF2 and TCF3.}
+\item{cpoint}{Matrix of threshold pairs.}
+\item{cutpoints}{Vector of grid thresholds.}
+\item{tcf1,tcf2,tcf3}{Matrices used to draw the surface.}
 
 Generic functions such as \code{plot} is also used to make a 3D plot of ROC surface
  with \code{rgl} style.
+
+Plot and print methods return the input invisibly.
 }
 \description{
-This function estimates the ROC curve of a continuous diagnostic test (biomarker) 
-in two-class setting.
+This function estimates the ROC surface of a continuous diagnostic test (biomarker) 
+in three-class setting.
 }
 \details{
-....
+For ordered thresholds \eqn{t_1} and \eqn{t_2}, \eqn{TCF_1 = P(X <= t_1)}, 
+\eqn{TCF_2 = P(t_1 < Y \le t_2)}, and \eqn{TCF_3 = P(Z > t_2)}. 
+The plot axes are \eqn{TCF_1}, \eqn{TCF_3} and \eqn{TCF_2}. Plotting uses an rgl device.
+The grid contains minus and plus infinity and ncp - 2 equally spaced
+points over the pooled range. The formula is \code{marker ~ group}.
+The default methods return the fitted object invisibly.
+}
+\examples{
+set.seed(123)
+x <- rnorm(40, 0, 1)
+y <- rnorm(40, 1, 1)
+z <- rnorm(40, 2, 1)
+fit <- ROC_emp_surface(x, y, z, ncp = 15, plot = FALSE)
+head(fit$vals)
+print(fit)
 }
 \references{
 To, D. K., Adimari, G., & Chiogna, M. (2024). 

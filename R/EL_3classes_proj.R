@@ -1,3 +1,22 @@
+#' Projected two-sample empirical likelihood statistic
+#'
+#' @description Low-level calculation of a two-sample minus twice log
+#' empirical likelihood ratio at a fixed threshold.
+#' @param X1,X2 Numeric observations from two independent ordered groups.
+#' @param n1,n2 Sample sizes associated with X1 and X2.
+#' @param tcf1,tcf2 Proposed probabilities P(X1 <= tau) and P(X2 > tau).
+#' Use interior probabilities for finite calculations.
+#' @param tau Single threshold in the overlap of the observed group ranges.
+#' @param type_F CDF estimator: "empi" uses empirical proportions;
+#' "Adi_ties" uses the interpolated tie-aware CDF. "Adi" requires an Fs
+#' helper that is not currently defined in the package and is unsupported.
+#' @details This helper does not validate sample sizes or handle zero log
+#' terms by limits. Boundary probabilities can produce NaN. Prefer the
+#' high-level inference functions for ordinary analyses.
+#' @return Numeric likelihood statistic, Inf outside overlapping ranges,
+#' or NaN for undefined boundary arithmetic.
+#' @examples
+#' empi_llike_proj(1:5, 2:6, 5, 5, tcf1 = 0.5, tcf2 = 0.5, tau = 3)
 #' @export
 empi_llike_proj <- function(X1, X2, n1, n2, tcf1, tcf2, tau,
                             type_F = c("empi", "Adi", "Adi_ties")) {

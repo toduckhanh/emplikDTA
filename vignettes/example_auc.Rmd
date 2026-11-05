@@ -6,7 +6,7 @@ vignette: >
   %\VignetteIndexEntry{Guide for use auc function}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-output: html_document
+output: rmarkdown::html_vignette
 ---
 
 ```{r check pandoc, eval=TRUE, echo=FALSE}
@@ -27,7 +27,7 @@ set.seed(34)
 # Simulated data
 
 ```{r}
-mu_true <- c(0, 0)
+mu_true <- c(0, 1)
 sigma_true <- c(1, 1)
 ```
 
@@ -83,24 +83,50 @@ out_roc <- ROC_emp_curve(x = X1, y = X2, plot = FALSE)
 
 ```{r}
 plot(out_roc) +
-    .geom_CR_emp(out_roc, cpt = 0.5) +
-    .geom_estimate(out_roc, cpt = 0.5) 
+    geom_confidence_region(out_roc, cpt = 0.5) +
+    geom_operating_point(out_roc, cpt = 0.5)
 ```
 
 ```{r}
-out_roc_2 <- ROC_emp_curve(formula = biom ~ diag, data = data_test, plot = FALSE)
+out_roc_2 <- ROC_emp_curve(formula = biom ~ diag, data = data_test, 
+                           plot = FALSE)
+p1 <- plot(out_roc_2)
+p1
+```
+
+Adding the confidence region for sensitivity and specificity at fixed threshold $t = 0.5$.
+
+```{r}
+p1 + geom_confidence_region(out_roc_2, cpt = 0.5) +
+  geom_operating_point(out_roc_2, cpt = 0.5) 
+```
+
+
+With optimal threshold
+
+```{r}
+out_thresh <- threshold2(x = X1, y = X2, method = "YI", kernel_type = "gauss", 
+                         bwd_type = "AZZ", plot = FALSE)
+
 ```
 
 ```{r}
-plot(out_roc_2) +
-    geom_confidence_region(out_roc_2, cpt = 0.5) +
-    geom_operating_point(out_roc_2, cpt = 0.5) 
+p1 + geom_confidence_region(out_thresh, cpt_type = "optimal") +
+  geom_operating_point(out_thresh, cpt_type = "optimal") 
 ```
+
 
 
 # Monte Carlo simulation
+
+Both bootstrap calibrations below use the signed square root of the
+adjusted EL statistic to test $H_0: \mathrm{AUC} = 1/2$ against
+$H_1: \mathrm{AUC} > 1/2$.
+Run the following simulation chunks interactively to reproduce the 5,000
+replicates.
+
 ## Default method
-```{r,warning=FALSE}
+```{r, eval=FALSE}
 out_auc_MC <- lapply(1:5000, FUN = function(i, n1, n2, mu, sigma){
   x1 <- rnorm(n1, mu[1], sigma[1])
   x2 <- rnorm(n2, mu[2], sigma[2])
@@ -108,28 +134,29 @@ out_auc_MC <- lapply(1:5000, FUN = function(i, n1, n2, mu, sigma){
   r_mean <- 1/mean(out_auc_temp$r.bts)
   ll_val_mean <- r_mean * out_auc_temp$ll.value
   ll_val_med <- out_auc_temp$ll.value * out_auc_temp$r.adj
-  p_val_mean <- pchisq(ll_val_mean, df = 1, lower.tail = FALSE)
+  signed_root_mean <- sign(out_auc_temp$estimate - 1/2) * sqrt(ll_val_mean)
+  p_val_mean <- pnorm(signed_root_mean, lower.tail = FALSE)
   p_val_med <- out_auc_temp$p.value
   return(list(ll_val_mean = ll_val_mean, ll_val_med = ll_val_med, 
               p_val_mean = p_val_mean, p_val_med = p_val_med))
 }, n1 = 30, n2 = 30, mu = mu_true, sigma = sigma_true)
 ```
 
-```{r}
+```{r, eval=FALSE}
 p_val_auc_mean_MC <- sapply(1:5000, function(i) out_auc_MC[[i]]$p_val_mean)
 hist(p_val_auc_mean_MC)
 ```
 
-```{r}
+```{r, eval=FALSE}
 p_val_auc_med_MC <- sapply(1:5000, function(i) out_auc_MC[[i]]$p_val_med)
 hist(p_val_auc_med_MC)
 ```
 
-```{r}
+```{r, eval=FALSE}
 sapply(c(0.1, 0.05, 0.01), FUN = function(x) mean(p_val_auc_mean_MC <= x))
 ```
 
-```{r}
+```{r, eval=FALSE}
 sapply(c(0.1, 0.05, 0.01), FUN = function(x) mean(p_val_auc_med_MC <= x))
 ```
 

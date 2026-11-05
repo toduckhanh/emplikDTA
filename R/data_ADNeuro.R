@@ -41,14 +41,14 @@
 #' Originally published in:
 #' 
 #' Xiong, C., van Belle, G., Miller, J. P., & Morris, J. C. (2006).
-#' *Measuring and Estimating Diagnostic Accuracy When There Are Three
-#' Ordinal Diagnostic Groups*.
-#' Statistics in Medicine, **25**(7), 1251--1273.
+#' Measuring and Estimating Diagnostic Accuracy When There Are Three
+#' Ordinal Diagnostic Groups.
+#' \emph{Statistics in Medicine}, \bold{25}(7), 1251-1273.
 #'
 #' Sorandt, M., & Hill, R. D. (1989).
-#' *Very Mild Senile Dementia of the Alzheimer Type. II. Psychometric Test
-#' Performance*.
-#' Archives of Neurology, **46**, 383--386.
+#' Very Mild Senile Dementia of the Alzheimer Type. II. Psychometric Test
+#' Performance.
+#' \emph{Archives of Neurology}, \bold{46}, 383-386.
 #'
 #' @examples
 #' data(ADNeuro)

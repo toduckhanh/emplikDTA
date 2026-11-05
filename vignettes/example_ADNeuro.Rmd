@@ -1,0 +1,313 @@
+---
+title: "Three-class ROC analysis with ADNeuro"
+author: "Duc-Khanh To"
+date: '`r Sys.Date()`'
+vignette: >
+  %\VignetteIndexEntry{Guide using threshold3 function}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+output: rmarkdown::html_vignette
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(rgl.useNULL = TRUE)
+library(emplikDTA)
+```
+
+# Prepare the data
+
+`ADNeuro` contains 14 neuropsychological scores from 118 participants aged 75. The Clinical Dementia Rating (CDR) defines three ordered groups. The labels `D-`, `D0`, and `D+` correspond to CDR 0 (no dementia), 0.5 (very mild dementia), and 1 (Alzheimer's disease), respectively. See `?ADNeuro` for the data source and the full list of scores.
+
+We use `FACTOR1` (global factor score), `ktemp` (temporal factor score), and `zpsy004` (logical memory score) to illustrate a global score, a domain score, and a single test. We keep the same participants across analyses by requiring all three scores and the group label to be observed.
+
+```{r data}
+data("ADNeuro", package = "emplikDTA")
+group_order <- c("D-", "D0", "D+")
+marker_formulas <- list(
+  FACTOR1 = I(-FACTOR1) ~ group,
+  ktemp = I(-ktemp) ~ group,
+  zpsy004 = I(-zpsy004) ~ group
+)
+columns <- c("group", names(marker_formulas))
+ad <- ADNeuro[complete.cases(ADNeuro[columns]), columns]
+
+rbind(Available = table(ADNeuro$group), Analysed = table(ad$group))
+aggregate(ad[names(marker_formulas)], list(group = ad$group), mean)
+```
+
+In the analysis sample, each mean score decreases with increasing severity. The formulas reverse the sign so that higher values indicate greater severity. All analyses receive the same formulas and the same `diag_levels` in order of increasing CDR.
+
+# 1. Estimate the empirical ROC surface with `ROC_emp_surface()`
+
+For the sign-reversed score $S$ and thresholds $a < b$, assign observations with $S \le a$ to `D-`, those with $a < S \le b$ to `D0`, and those with $S > b$ to `D+`. The three true class fractions (TCFs) are the probabilities of correct classification conditional on the respective diagnostic groups.
+
+Each threshold pair gives one point on the ROC surface. The rows of `cpoint` and `vals` contain the pairs and the corresponding empirical TCFs. `ncp` sets the number of candidate cut points, including the two infinities.
+
+```{r roc-surface}
+roc_fits <- lapply(marker_formulas, function(f) {
+  ROC_emp_surface(f, data = ad, diag_levels = group_order,
+                  ncp = 35, plot = FALSE)
+})
+
+marker <- "FACTOR1"
+roc <- roc_fits[[marker]]
+print(roc)
+knitr::kable(
+  head(data.frame(tau1 = roc$cpoint[, 1], tau2 = roc$cpoint[, 2], roc$vals)),
+  row.names = FALSE, digits = 3
+)
+
+plot(roc, color = "steelblue", alpha = 0.35)
+roc_widget <- rgl::rglwidget(width = 640, height = 500)
+rgl::close3d()
+roc_widget
+```
+
+Drag to rotate the surface. The plotted axes $(x,y,z)$ correspond to $(\mathrm{TCF}_1, \mathrm{TCF}_3, \mathrm{TCF}_2)$.
+
+# 2. Compare the volume under the surface with `vus()`
+
+VUS measures how often a random triplet with one participant from each group is ordered correctly by the score. The estimate gives partial credit to ties. The reference value for chance ordering is $1/6$. `vus()` reports a bootstrap-adjusted empirical likelihood (EL) confidence interval and a test of the supplied reference value.
+
+```{r vus}
+vus_null <- 1/6
+vus_fits <- lapply(marker_formulas, function(f) {
+  vus(f, data = ad, diag_levels = group_order, vus0 = vus_null,
+      ci_level = 0.95, B = 500, seed = 34, alternative = "greater")
+})
+
+vus_table <- do.call(rbind, lapply(vus_fits, function(fit) {
+  c(VUS = fit$estimate, Lower = fit$conf.int[1], Upper = fit$conf.int[2])
+}))
+knitr::kable(vus_table, digits = 3, caption = "VUS and 95% EL confidence intervals.")
+```
+
+The three VUS estimates range from about 0.75 to 0.78 in this sample. Their intervals quantify uncertainty for each score separately.
+
+## Test whether VUS exceeds chance ordering
+
+For each marker, use `alternative = "greater"` to test $H_0: \mathrm{VUS} = 1/6$ against $H_1: \mathrm{VUS} > 1/6$. The one-sided `p.value` uses the upper tail of the standard normal approximation for the signed square root of the adjusted EL statistic. The sign comes from the estimated VUS minus $1/6$. See [the signed root of the empirical likelihood ratio](https://academic.oup.com/biomet/article-abstract/76/3/447/298197).
+
+Treat the three marker tests as one family. Bonferroni and Holm control the family-wise error rate and allow dependence between tests, as can occur when the markers are measured on the same participants. Apply each correction to the vector of one-sided p-values using [`stats::p.adjust()`](https://search.r-project.org/R/refmans/stats/help/p.adjust.html).
+
+```{r vus-tests}
+p_greater <- vapply(vus_fits, function(fit) {
+  if (is.null(fit$p.value)) NA_real_ else fit$p.value
+}, numeric(1))
+
+n_tests <- length(vus_fits)
+p_table <- cbind(
+  "One-sided p" = p_greater,
+  "Bonferroni" = stats::p.adjust(p_greater, method = "bonferroni", n = n_tests),
+  "Holm" = stats::p.adjust(p_greater, method = "holm", n = n_tests)
+)
+knitr::kable(
+  formatC(p_table, format = "e", digits = 3), align = "r",
+  caption = "One-sided VUS p-values before and after adjustment across the three markers."
+)
+```
+
+The code leaves a missing p-value as `NA` when `vus()` omits the test at a boundary estimate and retains the planned number of tests in the adjustment. In this example, all three adjusted p-values are below $0.05$ with either correction, so both procedures reject $H_0$ for each marker in favor of VUS above $1/6$.
+
+# 3. Compare optimal threshold pairs with `threshold3()`
+
+With `method = "all"`, the three criteria share the Gaussian kernel bandwidths and the bootstrap samples for a given score.
+
+- **GYI** maximizes the sum of the TCFs.
+- **CtP** minimizes the Euclidean distance to perfect classification $(1, 1, 1)$.
+- **MV** maximizes the product of the TCFs.
+
+`ci = TRUE` adds a percentile interval for each threshold and a bootstrap cutoff for the joint EL region of the three TCFs at the optimal thresholds.
+
+```{r thresholds}
+opt_fits <- lapply(marker_formulas, function(f) {
+  threshold3(f, data = ad, diag_levels = group_order, method = "all",
+             kernel_type = "gauss", bwd_type = "RT",
+             ci = TRUE, ci_level = 0.95, B = 1000, seed = 34, plot = FALSE)
+})
+
+thresholds <- do.call(rbind, lapply(names(opt_fits), function(m) {
+  data.frame(Marker = m, opt_fits[[m]]$summary)
+}))
+stopifnot(all(thresholds$tau1 < thresholds$tau2))
+
+knitr::kable(
+  thresholds[c("Marker", "method", "tau1", "tau2",
+               "tcf1_opt", "tcf2_opt", "tcf3_opt")],
+  digits = 3, col.names = c("Marker", "Criterion", "t1", "t2", "TCF1", "TCF2", "TCF3"),
+  caption = "Optimal thresholds on the sign-reversed scale and kernel estimates of the TCFs."
+)
+```
+
+For `FACTOR1`, CtP yields a higher TCF2 and lower TCF1 and TCF3 than GYI. To apply the thresholds to the original score $M$, assign $M \ge -t_1$ to `D-`, $-t_2 \le M < -t_1$ to `D0`, and $M < -t_1$ to `D+`. Individual results are available by criterion in `$results`.
+
+```{r threshold-intervals}
+opt <- opt_fits[[marker]]
+gyi_intervals <- opt$results$GYI$ci_tau
+rownames(gyi_intervals) <- c("t1", "t2")
+knitr::kable(gyi_intervals, digits = 3, col.names = c("Lower", "Upper"),
+             caption = "95% bootstrap percentile intervals for the FACTOR1 GYI thresholds.")
+```
+
+# 4. Add a joint confidence region for the optimal TCFs
+
+For each criterion, evaluate the empirical likelihood statistic at its estimated pair `fit$opt_thresh`. The joint region consists of the TCF triplets whose statistic is at most the criterion's bootstrap cutoff `fit$c_alp`. The cutoff accounts for re-estimating the optimal thresholds in the bootstrap. `CR_tcfs()` uses a chi-squared cutoff for fixed thresholds.
+
+The helper below uses the package's internal EL functions to draw the boundary at the bootstrap cutoff. The red point uses empirical proportions at the fitted thresholds. The threshold table above reports kernel estimates. The blue surface is the empirical ROC surface, and the red boundary encloses the joint region in TCF space. Each region has a nominal 95% confidence level for its own criterion.
+
+```{r region-helper}
+plot_opt_region <- function(roc, fit) {
+  tau <- fit$opt_thresh
+  stopifnot(tau[1] < tau[2], is.finite(fit$c_alp))
+  el <- emplikDTA:::empi_llike3_prepare(
+    x = roc$x, y = roc$y, z = roc$z, tau = tau, type_F = "empi"
+  )
+  point <- emplikDTA:::tcfs_emp(roc$x, roc$y, roc$z, tau)
+  stopifnot(!is.null(el), all(point > 0 & point < 1))
+
+  grid <- seq(0.001, 0.999, length.out = 41)
+  plot(roc, color = "steelblue", alpha = 0.25)
+  on.exit(rgl::close3d())
+  misc3d::contour3d(
+    f = function(x, y, z) {
+      emplikDTA:::empi_llike_3C(el, tcf1 = x, tcf2 = z, tcf3 = y)
+    },
+    level = fit$c_alp, x = grid, y = grid, z = grid,
+    add = TRUE, color = "firebrick", alpha = 0.45
+  )
+  rgl::points3d(point[1], point[3], point[2], color = "firebrick", size = 9)
+  rgl::rglwidget(width = 640, height = 500)
+}
+```
+
+## FACTOR1 with GYI
+
+```{r region-gyi}
+plot_opt_region(roc, opt$results$GYI)
+```
+
+## FACTOR1 with CtP
+
+```{r region-ctp}
+plot_opt_region(roc, opt$results$CtP)
+```
+
+## FACTOR1 with MV
+
+```{r region-mv}
+plot_opt_region(roc, opt$results$MV)
+```
+
+To draw a region for another score, use the ROC fit and the threshold fit for that same score. For example, use `roc_fits$ktemp` and `opt_fits$ktemp$results$GYI` as the two arguments to `plot_opt_region()`.
+
+# 5. Estimate TCF2 at specified TCF1 and TCF3 with `tcf2()`
+
+Instead of optimizing a criterion over all three groups, we can specify target correct-classification fractions for `D-` and `D+`, then estimate the fraction correctly classified as `D0`. For the sign-reversed score, `tcf2()` estimates the lower threshold as the TCF1 quantile in `D-` and the upper threshold as the $(1 - \mathrm{TCF}_3)$ quantile in `D+`, using `quantile(..., type = 8)`. TCF2 is the observed proportion of `D0` scores between these thresholds, with the lower endpoint excluded and the upper endpoint included.
+
+The two targets must give an ordered threshold pair. All pairs used below satisfy this condition for the three markers. Since thresholds come from interpolated sample quantiles, the empirical TCF1 and TCF3 need not equal their targets exactly.
+
+## Fix TCF1 and TCF3 at 0.8
+
+Use `tcf10 = 0.8` and `tcf30 = 0.8` for each marker. The bootstrap-adjusted EL interval describes uncertainty in TCF2 at these targets, including estimation of the two thresholds. We use 500 bootstrap replicates and a fixed seed for reproducibility.
+
+```{r tcf2-fixed}
+tcf2_fixed <- lapply(marker_formulas, function(f) {
+  tcf2(f, data = ad, diag_levels = group_order,
+       tcf10 = 0.8, tcf30 = 0.8,
+       ci_level = 0.95, B = 500, seed = 34, plot = FALSE)
+})
+
+tcf2_fixed_table <- do.call(rbind, lapply(names(tcf2_fixed), function(m) {
+  fit <- tcf2_fixed[[m]]
+  stopifnot(fit$tau_est[1] < fit$tau_est[2])
+  data.frame(
+    Marker = m, TCF1 = fit$tcf1, TCF3 = fit$tcf3,
+    t1 = fit$tau_est[1], t2 = fit$tau_est[2], TCF2 = fit$estimate,
+    Lower = fit$conf.int[1], Upper = fit$conf.int[2]
+  )
+}))
+knitr::kable(
+  tcf2_fixed_table, row.names = FALSE, digits = 3,
+  caption = "TCF2 and 95% EL confidence intervals at target TCF1 = TCF3 = 0.8."
+)
+```
+
+At these targets, both `FACTOR1` and `ktemp` correctly classify about 72% of the `D0` group, compared with about 58% for `zpsy004`. These are descriptive comparisons on the same participants; the individual confidence intervals do not constitute a test of differences between markers. The thresholds are on the sign-reversed scale used throughout this vignette.
+
+## Vary the pair of TCF1 and TCF3 targets
+
+Evaluate all 16 combinations of TCF1 and TCF3 in `c(0.6, 0.7, 0.8, 0.9)` for each marker. Varying the two targets separately shows whether TCF2 is more sensitive to the requirement for `D-` or for `D+`.
+
+```{r tcf2-grid}
+tcf_targets <- expand.grid(
+  TCF1 = c(0.6, 0.7, 0.8, 0.9),
+  TCF3 = c(0.6, 0.7, 0.8, 0.9)
+)
+
+tcf2_grid <- do.call(rbind, lapply(names(marker_formulas), function(m) {
+  do.call(rbind, lapply(seq_len(nrow(tcf_targets)), function(i) {
+    fit <- tcf2(
+      marker_formulas[[m]], data = ad, diag_levels = group_order,
+      tcf10 = tcf_targets$TCF1[i], tcf30 = tcf_targets$TCF3[i],
+      ci_level = 0.95, B = 500, seed = 34, plot = FALSE
+    )
+    stopifnot(fit$tau_est[1] < fit$tau_est[2])
+    data.frame(
+      Marker = m, TCF1 = fit$tcf1, TCF3 = fit$tcf3,
+      t1 = fit$tau_est[1], t2 = fit$tau_est[2], TCF2 = fit$estimate,
+      Lower = fit$conf.int[1], Upper = fit$conf.int[2]
+    )
+  }))
+}))
+```
+
+```{r tcf2-grid-plot, fig.width=8, fig.height=3.5, fig.cap="Estimated TCF2 for each pair of target TCF1 and TCF3 values. All panels use the same colour scale."}
+ggplot2::ggplot(tcf2_grid, ggplot2::aes(x = TCF1, y = TCF3, fill = TCF2)) +
+  ggplot2::geom_tile() +
+  ggplot2::geom_text(ggplot2::aes(label = sprintf("%.2f", TCF2)), size = 3) +
+  ggplot2::facet_wrap(~ Marker, nrow = 1) +
+  ggplot2::scale_x_continuous(breaks = sort(unique(tcf_targets$TCF1))) +
+  ggplot2::scale_y_continuous(breaks = sort(unique(tcf_targets$TCF3))) +
+  ggplot2::scale_fill_gradient(low = "white", high = "steelblue", limits = c(0, 1)) +
+  ggplot2::coord_equal() +
+  ggplot2::labs(x = "Target TCF1 (D-)", y = "Target TCF3 (D+)", fill = "TCF2") +
+  ggplot2::theme_bw()
+```
+
+Increasing TCF1 raises the lower threshold, while increasing TCF3 lowers the upper threshold. Either change narrows the interval assigned to `D0`, so the empirical TCF2 cannot increase while the thresholds remain ordered. Steps or plateaus arise because TCF2 is an empirical proportion.
+
+For example, when both targets rise from 0.6 to 0.9, TCF2 falls from about 0.84 to 0.51 for `FACTOR1`, from 0.84 to 0.49 for `ktemp`, and from 0.86 to 0.23 for `zpsy004`. Thus, the marker with the highest TCF2 depends on the chosen targets. The `Lower` and `Upper` columns in `tcf2_grid` retain the pointwise 95% EL intervals; they are not simultaneous intervals across the grid. If the target range is extended, check that the resulting thresholds remain ordered before interpreting TCF2.
+
+## Plot the EL confidence intervals across target pairs
+
+The plot below uses the estimates and confidence limits already stored in `tcf2_grid`. Each row gives one target pair `(TCF1, TCF3)`, with pairs grouped by TCF3. Points show the TCF2 estimates and horizontal bars show their pointwise 95% EL confidence intervals. All three marker panels use the same TCF2 scale.
+
+```{r tcf2-grid-ci-plot, fig.width=8, fig.height=6, fig.cap="TCF2 estimates and pointwise 95% EL confidence intervals for all 16 target pairs, shown as (TCF1, TCF3)."}
+pair_labels <- with(tcf_targets, sprintf("(%.1f, %.1f)", TCF1, TCF3))
+tcf2_ci_data <- transform(
+  tcf2_grid,
+  Target_pair = factor(
+    sprintf("(%.1f, %.1f)", TCF1, TCF3), levels = rev(pair_labels)
+  )
+)
+
+tcf2_ci_plot <- ggplot2::ggplot(
+  tcf2_ci_data, ggplot2::aes(x = TCF2, y = Target_pair)
+) +
+  ggplot2::geom_errorbar(
+    ggplot2::aes(xmin = Lower, xmax = Upper),
+    orientation = "y", width = 0.25, colour = "steelblue"
+  ) +
+  ggplot2::geom_point(size = 1.8, colour = "steelblue") +
+  ggplot2::facet_wrap(~ Marker, nrow = 1) +
+  ggplot2::scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
+  ggplot2::labs(x = "TCF2 with 95% EL confidence interval",
+                y = "Target pair (TCF1, TCF3)") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank())
+tcf2_ci_plot
+```
+
+Some intervals are wide, especially at the more demanding target pairs, so the point estimates should be interpreted together with their uncertainty. Overlap of these individual intervals is not a formal test of differences between target pairs or markers.

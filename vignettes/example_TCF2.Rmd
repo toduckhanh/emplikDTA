@@ -1,12 +1,12 @@
 ---
-title: "Guide for making ROC surface"
+title: "Inference for the Middle True Class Fraction"
 author: "Duc-Khanh To"
 date: '`r Sys.Date()`'
 vignette: >
-  %\VignetteIndexEntry{Guide for making ROC surface}
+  %\VignetteIndexEntry{Inference for the Middle True Class Fraction}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-output: html_document
+output: rmarkdown::html_vignette
 ---
 
 ```{r check pandoc, eval=TRUE, echo=FALSE}
@@ -21,7 +21,7 @@ if (!requireNamespace("rmarkdown", quietly = TRUE) ||
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(emplikDTA)
-library(rgl)
+set.seed(34)
 ```
 
 

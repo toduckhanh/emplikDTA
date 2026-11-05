@@ -7,16 +7,26 @@
 \usage{
 geom_confidence_region(
   object,
-  cpt,
+  cpt_type = c("fixed", "optimal"),
+  cpt = NULL,
   ci_level = 0.95,
   colour = "blue",
   linewidth = 0.8
 )
 
-geom_operating_point(object, cpt, colour = "red", size = 2.5)
+geom_operating_point(
+  object,
+  cpt_type = c("fixed", "optimal"),
+  cpt = NULL,
+  colour = "red",
+  size = 2.5
+)
 }
 \arguments{
-\item{object}{an object of class \code{ROC_emp_curve}.}
+\item{object}{A ROC_emp_curve object for fixed thresholds, or a threshold2
+object fitted with ci = TRUE for optimal thresholds.}
+
+\item{cpt_type}{Use a fixed threshold or a fitted optimal threshold.}
 
 \item{cpt}{a numeric value specifying the cut-point at which the operating
 point and confidence region are computed.}
@@ -40,7 +50,7 @@ region boundary.}
 Add a Confidence Region to an Empirical ROC Curve
 
 Functions for adding graphical layers to an empirical ROC curve produced by
-\code{\link[emplikDTA]{plot.ROC_emp_curve()}}. These functions return standard
+\code{\link[emplikDTA]{plot.ROC_emp_curve}}. These functions return standard
  \code{ggplot2} layers and
 are intended to be combined with the output of `plot()` using the `+` operator.
 
@@ -51,6 +61,12 @@ specificity and sensitivity corresponding to a specified cut-point.
 (false positive rate, true positive rate) corresponding to a specified
 cut-point.
 }
+\details{
+Both branches currently use a chi-squared cutoff with two degrees
+of freedom. For the bootstrap-calibrated optimal-threshold region, use
+\code{plot} on the threshold2 fit. The cpt argument is ignored for optimal
+thresholds.
+}
 \seealso{
-\code{\link[emplikDTA]{ROC_emp_curve()}} and \code{\link[emplikDTA]{plot.ROC_emp_curve()}}
+\code{\link[emplikDTA]{ROC_emp_curve}} and \code{\link[emplikDTA]{plot.ROC_emp_curve}}
 }
