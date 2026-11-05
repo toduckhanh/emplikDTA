@@ -109,7 +109,7 @@ ROC_emp_curve <- function(x, ...) {
 }
 
 #' @rdname ROC_emp_curve
-#' @param x, y numeric vectors (default method) contains values of diagnostic test (biomarker)
+#' @param x,y numeric vectors (default method) contains values of diagnostic test (biomarker)
 #' corresponding to the first and second class of disease. The ordering is intended 
 #' to be ``increasing'' with respect to the disease severity.
 #' @param ncp an integer specifying the number of cut-points used to construct
