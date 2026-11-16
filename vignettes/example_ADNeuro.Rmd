@@ -140,7 +140,7 @@ knitr::kable(
 )
 ```
 
-For `FACTOR1`, CtP yields a higher TCF2 and lower TCF1 and TCF3 than GYI. To apply the thresholds to the original score $M$, assign $M \ge -t_1$ to `D-`, $-t_2 \le M < -t_1$ to `D0`, and $M < -t_1$ to `D+`. Individual results are available by criterion in `$results`.
+For `FACTOR1`, CtP yields a higher TCF2 and lower TCF1 and TCF3 than GYI. To apply the thresholds to the original score $M$, assign $M \ge -t_1$ to `D-`, $-t_2 \le M < -t_1$ to `D0`, and $M < -t_2$ to `D+`. Individual results are available by criterion in `$results`.
 
 ```{r threshold-intervals}
 opt <- opt_fits[[marker]]
@@ -152,7 +152,7 @@ knitr::kable(gyi_intervals, digits = 3, col.names = c("Lower", "Upper"),
 
 # 4. Add a joint confidence region for the optimal TCFs
 
-For each criterion, evaluate the empirical likelihood statistic at its estimated pair `fit$opt_thresh`. The joint region consists of the TCF triplets whose statistic is at most the criterion's bootstrap cutoff `fit$c_alp`. The cutoff accounts for re-estimating the optimal thresholds in the bootstrap. `CR_tcfs()` uses a chi-squared cutoff for fixed thresholds.
+For each criterion, evaluate the empirical likelihood statistic at its estimated pair `fit$opt_thresh`. The joint region consists of the TCF triplets whose statistic is at most the criterion's bootstrap cutoff `fit$c_alp`. This example uses the same data for threshold selection and inference, so the bootstrap refits the thresholds. `CR_tcfs()` uses a chi-squared cutoff for fixed thresholds. See `vignette("example_optimal_threshold3")` for the bootstrap workflow with an independent assessment sample.
 
 The helper below uses the package's internal EL functions to draw the boundary at the bootstrap cutoff. The red point uses empirical proportions at the fitted thresholds. The threshold table above reports kernel estimates. The blue surface is the empirical ROC surface, and the red boundary encloses the joint region in TCF space. Each region has a nominal 95% confidence level for its own criterion.
 

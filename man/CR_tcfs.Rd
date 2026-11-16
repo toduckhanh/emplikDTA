@@ -32,11 +32,12 @@ CR_tcfs(x, ...)
 
 \item{color2}{Colour requested for the confidence boundary.}
 
-\item{smooth}{Smoothing argument passed to \code{misc3d::contour3d}.}
+\item{smooth}{Smoothing argument passed to \code{misc3d::contour3d}
+for distinct thresholds.}
 
 \item{alpha}{Opacity of the confidence region.}
 
-\item{fill}{Whether to fill the contour surface.}
+\item{fill}{Whether to fill the contour surface for distinct thresholds.}
 }
 \value{
 The input object, invisibly, if plotting succeeds.
@@ -46,9 +47,21 @@ Add a fixed-threshold empirical likelihood confidence region
 and empirical operating point to an existing ROC surface scene.
 }
 \details{
-The region uses a chi-squared cutoff with three degrees
-of freedom on a 51-by-51-by-51 grid. Axes are TCF1, TCF3, TCF2.
+Call after plotting the ROC surface for the observations used
+to assess the rule. \code{cpts} uses the same marker scale as that
+surface. The function evaluates the sum of the binomial deviances
+at the supplied pair, using the limits at empirical fractions of zero
+and one. The plotted point uses the empirical TCFs from \code{x}.
+
+For distinct thresholds, the cutoff uses the chi-squared distribution
+with three degrees of freedom, the large-sample reference for fixed
+thresholds and interior population fractions. For coincident
+thresholds, the cutoff uses two degrees of freedom and the boundary
+is drawn on the plane \eqn{\mathrm{TCF}_2=0}. The axes are
+TCF1, TCF3, and TCF2. Use \code{\link{threshold3}} with
+\code{ci = TRUE, plot = TRUE} to select thresholds and draw a
+bootstrap-calibrated region in one call.
 }
 \seealso{
-\code{\link{ROC_emp_surface}}
+\code{\link{ROC_emp_surface}}, \code{\link{threshold3}}
 }

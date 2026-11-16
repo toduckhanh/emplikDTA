@@ -273,6 +273,28 @@ print.ROC_emp_surface <- function(x, ...) {
   invisible(x)
 }
 
+.plot_tcf_region <- function(obj, cutoff, color, alpha, fill, smooth = 0) {
+  grid <- seq(0, 1, length.out = 51)
+  # Include the minimum of each deviance so narrow regions meet the grid.
+  tcf1 <- sort(unique(c(grid, obj$F1)))
+  tcf3 <- sort(unique(c(grid, 1 - obj$F3)))
+  if (isTRUE(obj$coincident)) {
+    surface <- outer(.tcf_deviance(rep(obj$F1, length(tcf1)), tcf1, obj$n1),
+                     .tcf_deviance(rep(1 - obj$F3, length(tcf3)), tcf3, obj$n3), "+")
+    boundary <- grDevices::contourLines(tcf1, tcf3, surface, levels = cutoff)
+    for (line in boundary) {
+      rgl::lines3d(line$x, line$y, rep(0, length(line$x)), color = color,
+                   alpha = alpha)
+    }
+  } else {
+    tcf2 <- sort(unique(c(grid, obj$F2)))
+    contour3d(f = function(x, y, z) empi_llike_3C(obj, x, z, y),
+              level = cutoff, x = tcf1, y = tcf3, z = tcf2,
+              draw = TRUE, add = TRUE, color = color, smooth = smooth,
+              alpha = alpha, fill = fill)
+  }
+}
+
 #' Draw a joint confidence region for three true class fractions
 #'
 #' @description Add a fixed-threshold empirical likelihood confidence region
@@ -282,14 +304,27 @@ print.ROC_emp_surface <- function(x, ...) {
 #' @param ci_level Confidence level in (0, 1).
 #' @param color1 Colour of the empirical point.
 #' @param color2 Colour requested for the confidence boundary.
-#' @param smooth Smoothing argument passed to \code{misc3d::contour3d}.
+#' @param smooth Smoothing argument passed to \code{misc3d::contour3d}
+#' for distinct thresholds.
 #' @param alpha Opacity of the confidence region.
-#' @param fill Whether to fill the contour surface.
+#' @param fill Whether to fill the contour surface for distinct thresholds.
 #' @param ... Arguments forwarded to the method.
-#' @details The region uses a chi-squared cutoff with three degrees
-#' of freedom on a 51-by-51-by-51 grid. Axes are TCF1, TCF3, TCF2.
+#' @details Call after plotting the ROC surface for the observations used
+#' to assess the rule. \code{cpts} uses the same marker scale as that
+#' surface. The function evaluates the sum of the binomial deviances
+#' at the supplied pair, using the limits at empirical fractions of zero
+#' and one. The plotted point uses the empirical TCFs from \code{x}.
+#'
+#' For distinct thresholds, the cutoff uses the chi-squared distribution
+#' with three degrees of freedom, the large-sample reference for fixed
+#' thresholds and interior population fractions. For coincident
+#' thresholds, the cutoff uses two degrees of freedom and the boundary
+#' is drawn on the plane \eqn{\mathrm{TCF}_2=0}. The axes are
+#' TCF1, TCF3, and TCF2. Use \code{\link{threshold3}} with
+#' \code{ci = TRUE, plot = TRUE} to select thresholds and draw a
+#' bootstrap-calibrated region in one call.
 #' @return The input object, invisibly, if plotting succeeds.
-#' @seealso \code{\link{ROC_emp_surface}}
+#' @seealso \code{\link{ROC_emp_surface}}, \code{\link{threshold3}}
 #' @export
 CR_tcfs <- function(x, ...) {
   UseMethod("CR_tcfs")
@@ -301,21 +336,15 @@ CR_tcfs.ROC_emp_surface <- function(x, cpts = NULL, ci_level = 0.95,
                                     color1 = "red", color2 = "blue", smooth = 0,
                                     alpha = 0.5, fill = FALSE, ...) {
   rlang::check_dots_empty()
-  if (is.null(cpts)) {
-    stop("Need to specified pair of thresholds to plot the confidence region.")
-  } else {
-    z1 <- seq(0, 1, length.out = 51)
-    z2 <- seq(0, 1, length.out = 51)
-    z3 <- seq(0, 1, length.out = 51)
-    obj_tcfs <- empi_llike3_prepare(x = x$x, y = x$y, z = x$z, tau = cpts,
-                                    type_F = "empi")
-    contour3d(f = function(x, y, z){
-      empi_llike_3C(obj_tcfs, tcf1 = x, tcf2 = z, tcf3 = y)
-    }, level = qchisq(ci_level, 3), x = z1, y = z3, z = z2, draw = TRUE,
-    add = TRUE, color2 = color2, smooth = smooth, alpha = alpha, fill = fill)
-    tcf_orgi <- tcfs_emp(x = x$x, y = x$y, z = x$z, tau = cpts)
-    plot3d(tcf_orgi[1], tcf_orgi[3], tcf_orgi[2], type = "s", col = color1,
-           radius = 0.01, add = TRUE)
+  if (!is.numeric(cpts) || length(cpts) != 2L ||
+      any(!is.finite(cpts)) || cpts[1L] > cpts[2L]) {
+    stop("'cpts' must contain two finite, ordered thresholds.", call. = FALSE)
   }
+  obj_tcfs <- empi_llike3_prepare(x$x, x$y, x$z, cpts)
+  cutoff <- qchisq(ci_level, df = if (obj_tcfs$coincident) 2 else 3)
+  .plot_tcf_region(obj_tcfs, cutoff, color2, alpha, fill, smooth)
+  tcf_orgi <- tcfs_emp(x = x$x, y = x$y, z = x$z, tau = cpts)
+  plot3d(tcf_orgi[1], tcf_orgi[3], tcf_orgi[2], type = "s", col = color1,
+         radius = 0.01, add = TRUE)
   invisible(x)
 }
