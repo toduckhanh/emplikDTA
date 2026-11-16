@@ -1,154 +1,135 @@
 ---
-title: "Guide for using threshold3 function"
+title: "Optimal thresholds and joint TCF regions"
 author: "Duc-Khanh To"
 date: '`r Sys.Date()`'
 vignette: >
-  %\VignetteIndexEntry{Guide for using threshold3 function}
+  %\VignetteIndexEntry{Optimal thresholds and joint TCF regions}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 output: rmarkdown::html_vignette
 ---
 
-```{r check pandoc, eval=TRUE, echo=FALSE}
-if (!requireNamespace("rmarkdown", quietly = TRUE) ||
-      !rmarkdown::pandoc_available("1.14")) {
-    warning(call. = FALSE, "These vignettes assume rmarkdown and pandoc version 1.14. These were not found. Older versions will not work.")
-    knitr::knit_exit()
-  }
-```
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 options(rgl.useNULL = TRUE)
 library(emplikDTA)
-library(rgl)
+```
+
+## Select the operating point
+
+Supply three independent groups in increasing diagnostic order. At thresholds
+$a\le b$, the rule assigns values at or below $a$ to class 1, values in $(a,b]$
+to class 2, and values above $b$ to class 3. The population TCFs are
+$F_1(a)$, $F_2(b)-F_2(a)$, and $1-F_3(b)$.
+
+```{r training}
 set.seed(34)
+training <- list(x = rnorm(30), y = rnorm(30, 2.5, 1.1),
+                 z = rnorm(30, 3.69, 1.2))
+assessment <- list(x = rnorm(60), y = rnorm(60, 2.5, 1.1),
+                   z = rnorm(60, 3.69, 1.2))
+
+selected <- with(training, threshold3(x, y, z, method = "all",
+                                      bwd_type = "AZZ", ci = FALSE))
+selected$summary
 ```
 
+GYI maximizes the sum of the kernel TCF estimates, CtP minimizes their
+Euclidean distance to $(1,1,1)$, and MV maximizes their product. All three
+criteria search under $a\le b$ and consider coincident thresholds. CtP and MV
+start from the best ordered grid pair and refine it on the feasible set.
 
-```{r}
-GYI_normal <- function(par, mu, sigma){
-  ff <- function(par, mu, sigma){
-    tcf1 <- pnorm(par[1], mean = mu[1], sd = sigma[1])
-    tcf2 <- pnorm(par[2], mean = mu[2], sd = sigma[2]) - 
-      pnorm(par[1], mean = mu[2], sd = sigma[2])
-    tcf3 <- 1 - pnorm(par[2], mean = mu[3], sd = sigma[3])
-    return(tcf1 + tcf2 + tcf3 + par[3]*(par[1] - par[2]))
-  }
-  out_optim <- optim(par = par, fn = ff, method = "L-BFGS-B",
-                     lower = c(-Inf, -Inf, 0), upper = c(Inf, Inf, Inf),
-                     mu = mu, sigma = sigma, control = list(fnscale = -1))
-  return(out_optim)
-}
+The formula interface uses the same group ordering. Here the levels are supplied
+explicitly.
 
-```
-
-
-# Simulated data
-```{r}
-mu_true <- c(0, 2.5, 3.69)
-sigma_true <- c(1, 1.1, 1.2)
-```
-
-```{r}
-true_GYI_normal <- GYI_normal(c(1.25, 3.1, 0.1), mu = mu_true, 
-                              sigma = sigma_true)
-true_GYI_normal
-```
-
-```{r}
-n1 <- 30
-n2 <- 30
-n3 <- 30
-```
-
-```{r}
-X1 <- rnorm(n1, mu_true[1], sigma_true[1])
-X2 <- rnorm(n2, mu_true[2], sigma_true[2])
-X3 <- rnorm(n3, mu_true[3], sigma_true[3])
-```
-
-## GYI
-
-```{r}
-out_GYI_normal <- threshold3(x = X1, y = X2, z = X3, method = "GYI",
-                             kernel_type = "gauss", bwd_type = "AZZ", B = 1000)
-```
-
-```{r}
-out_GYI_normal$opt_thresh
-```
-
-```{r}
-quantile(out_GYI_normal$out_bts[1,], probs = (1 + c(-1, 1)*0.95)/2, 
-         type = 8, names = FALSE)
-```
-
-```{r}
-quantile(out_GYI_normal$out_bts[2,], probs = (1 + c(-1, 1)*0.95)/2, 
-         type = 8, names = FALSE)
-```
-
-```{r}
-out_GYI_normal$ci_tau
-```
-```{r}
-out_GYI_normal$c_alp
-```
-
-```{r}
-data_test <- data.frame(biom = c(X1, X2, X3), 
-                        diag = rep(c("1", "2", "3"), c(n1, n2, n3)))
-```
-
-```{r}
-out_GYI_normal_2 <- threshold3(formula = biom ~ diag, data = data_test, 
-                               method = "GYI", kernel_type = "gauss", 
-                               bwd_type = "AZZ", B = 1000)
-```
-
-```{r}
-out_GYI_normal_2$opt_thresh
-```
-
-```{r}
-out_GYI_normal_2$ci_tau
-```
-
-```{r}
-out_GYI_normal_2$c_alp
-```
-
-## Explore the ROC surface interactively
-
-Run the following chunks interactively to draw a joint region at the fixed
-thresholds 0.5 and 3.4.
-
-```{r, eval=FALSE}
-out_roc_surface <- ROC_emp_surface(X1, X2, X3, ncp = 35)
-CR_tcfs(out_roc_surface, cpts = c(0.5, 3.4), fill = TRUE)
-rgl::rglwidget(width = 800, height = 800)
-rgl::close3d()
-```
-
-
-
-
-```{r, eval=FALSE}
-out_roc_surface_2 <- ROC_emp_surface(formula = biom ~ diag, data = data_test, ncp = 35,
-                                     color = "steelblue", alpha = 0.5)
-rgl::rglwidget(
-    width = 800,
-    height = 800
+```{r formula}
+train_data <- data.frame(
+  marker = unlist(training, use.names = FALSE),
+  group = rep(c("low", "middle", "high"), lengths(training))
 )
+fit_formula <- threshold3(marker ~ group, data = train_data,
+                          diag_levels = c("low", "middle", "high"),
+                          bwd_type = "AZZ", ci = FALSE)
+fit_formula$opt_thresh
 ```
 
+## Assess the selected rule on independent data
 
+Pass independent observations on the same marker scale in `assessment`. The
+thresholds and training kernel estimates still come from `training`. All
+counts for the joint region come from `assessment`, with the selected pair
+held fixed. Conditional on training, the target is the population TCF triplet
+of that fitted rule.
 
-```{r, eval=FALSE}
-CR_tcfs(out_roc_surface_2, cpts = c(0.5, 3.4), fill = TRUE)
-rgl::rglwidget(width = 800, height = 800)
-rgl::close3d()
+```{r fixed-bootstrap}
+fit <- with(training, threshold3(x, y, z, method = "GYI",
+                                 bwd_type = "AZZ", assessment = assessment,
+                                 B = 199, seed = 34))
+fit$opt_thresh
+fit$c_alp
+head(t(fit$out_bts))
 ```
 
+The first two rows of `out_bts` repeat the selected thresholds. The third row
+contains the bootstrap statistics. On the assessment sample, the binomial
+deviance uses the observed counts. In the bootstrap it uses the simulated
+counts. If the observed count is 0 or $n_j$ in group $j$, the binomial
+generating probability is $(k_j+0.5)/(n_j+1)$. With coincident thresholds the
+middle interval is empty, so the region lies on the $\mathrm{TCF}_2=0$ plane
+and the cutoff uses only the outer groups.
+
+To check a candidate triplet, compare the joint deviance with `c_alp`. The
+binomial log-likelihood calculation below handles matching endpoint values
+without taking the product of zero and an infinite logarithm.
+
+```{r membership}
+a <- fit$opt_thresh[1L]
+b <- fit$opt_thresh[2L]
+counts <- with(assessment, c(sum(x <= a), sum(a < y & y <= b), sum(z > b)))
+n <- lengths(assessment)
+candidate <- c(0.85, 0.55, 0.70)
+deviance <- 2 * sum(dbinom(counts, n, counts / n, log = TRUE) -
+                    dbinom(counts, n, candidate, log = TRUE))
+c(deviance = deviance, cutoff = fit$c_alp, inside = deviance <= fit$c_alp)
+```
+
+## Use the training data with bootstrap threshold refitting
+
+When `assessment` is omitted, `threshold3()` builds the region using the
+same data that selected the thresholds. Each bootstrap replicate refits the
+thresholds using the original bandwidths. The original kernel estimates of
+the TCFs serve as reference values. This workflow also returns `ci_tau`,
+a separate percentile interval for each threshold.
+
+```{r refitting-bootstrap}
+fit_refit <- with(training, threshold3(x, y, z, method = "GYI",
+                                       bwd_type = "AZZ", B = 199, seed = 34))
+fit_refit$ci_tau
+fit_refit$c_alp
+sum(!is.finite(fit_refit$out_bts["ll", ]))
+```
+
+A coincident bootstrap pair gives an infinite statistic when the original
+kernel estimate of TCF2 is positive. Check
+that `c_alp` is finite before interpreting the region.
+
+## Draw the regions
+
+Run these examples interactively. `threshold3(..., plot = TRUE)` draws the
+bootstrap-calibrated region. The red point gives the empirical TCFs on the
+sample used for inference. The plot axes are TCF1, TCF3, and TCF2.
+
+```{r assessment-plot, eval=FALSE}
+with(training, threshold3(x, y, z, method = "GYI", bwd_type = "AZZ",
+                          assessment = assessment, B = 199, seed = 34,
+                          plot = TRUE))
+```
+
+For a fixed pair and chi-squared calibration, draw the assessment ROC surface
+first and add the region with `CR_tcfs()`. This call uses three degrees of
+freedom for distinct thresholds and two for coincident thresholds.
+
+```{r fixed-plot, eval=FALSE}
+roc <- with(assessment, ROC_emp_surface(x, y, z, ncp = 35))
+CR_tcfs(roc, cpts = fit$opt_thresh, fill = TRUE)
+```

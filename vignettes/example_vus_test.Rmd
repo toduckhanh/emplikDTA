@@ -67,82 +67,91 @@ out_vus$ll.value * out_vus$r.adj
 Both bootstrap calibrations below use the signed square root of the
 adjusted EL statistic to test $H_0: \mathrm{VUS} = 1/6$ against
 $H_1: \mathrm{VUS} > 1/6$.
-Run the following simulation chunks interactively to reproduce the 5,000
-replicates per interface.
+Run the simulation setup and either interface interactively to reproduce the
+5,000 replicates. Each dataset has 30 independent standard normal observations
+per class. Both interfaces use the same datasets and bootstrap seeds.
+
+```{r vus-null-data, eval=FALSE}
+set.seed(35)
+vus_null_data <- replicate(5000L, matrix(rnorm(90L), ncol = 3L),
+                           simplify = FALSE)
+alpha_levels <- c(0.10, 0.05, 0.01)
+```
 
 ## Default method
 ```{r, eval=FALSE}
-out_vus_MC <- lapply(1:5000, FUN = function(i, n1, n2, n3, mu, sigma){
-  x1 <- rnorm(n1, mu[1], sigma[1])
-  x2 <- rnorm(n2, mu[2], sigma[2])
-  x3 <- rnorm(n3, mu[3], sigma[3])
-  out_vus_temp <- vus(x = x1, y = x2, z = x3, seed = NULL)
+out_vus_MC <- lapply(seq_along(vus_null_data), function(i) {
+  null_sample <- vus_null_data[[i]]
+  out_vus_temp <- vus(x = null_sample[, 1], y = null_sample[, 2],
+                      z = null_sample[, 3], vus0 = 1 / 6,
+                      alternative = "greater", B = 500,
+                      seed = length(vus_null_data) + i)
   r_mean <- 1/mean(out_vus_temp$r.bts)
   ll_val_mean <- r_mean * out_vus_temp$ll.value
   ll_val_med <- out_vus_temp$ll.value * out_vus_temp$r.adj
-  signed_root_mean <- sign(out_vus_temp$estimate - 1/6) * sqrt(ll_val_mean)
+  signed_root_mean <- sign(out_vus_temp$estimate - 1/6) * sqrt(max(0, ll_val_mean))
   p_val_mean <- pnorm(signed_root_mean, lower.tail = FALSE)
   p_val_med <- out_vus_temp$p.value
   return(list(ll_val_mean = ll_val_mean, ll_val_med = ll_val_med, 
               p_val_mean = p_val_mean, p_val_med = p_val_med))
-}, n1 = 30, n2 = 30, n3 = 30, mu = mu_true, sigma = sigma_true)
+})
 ```
 
 ```{r, eval=FALSE}
-p_val_mean_MC <- sapply(1:5000, function(i) out_vus_MC[[i]]$p_val_mean)
+p_val_mean_MC <- vapply(out_vus_MC, `[[`, numeric(1), "p_val_mean")
 hist(p_val_mean_MC)
 ```
 
 ```{r, eval=FALSE}
-p_val_med_MC <- sapply(1:5000, function(i) out_vus_MC[[i]]$p_val_med)
+p_val_med_MC <- vapply(out_vus_MC, `[[`, numeric(1), "p_val_med")
 hist(p_val_med_MC)
 ```
 
 ```{r, eval=FALSE}
-mean(p_val_mean_MC <= 0.05)
+sapply(alpha_levels, function(x) mean(p_val_mean_MC <= x))
 ```
 
 ```{r, eval=FALSE}
-mean(p_val_med_MC <= 0.05)
+sapply(alpha_levels, function(x) mean(p_val_med_MC <= x))
 ```
 
 ## Formula method
 ```{r, eval=FALSE, warning=FALSE}
-out_vus_form_MC <- lapply(1:5000, FUN = function(i, n1, n2, n3, mu, sigma){
-  x1 <- rnorm(n1, mu[1], sigma[1])
-  x2 <- rnorm(n2, mu[2], sigma[2])
-  x3 <- rnorm(n3, mu[3], sigma[3])
-  data_test <- data.frame(biom = c(x1, x2, x3), 
-                          diag = rep(c("1", "2", "3"), c(n1, n2, n3)))
-  out_vus_temp <- vus(formula = biom ~ diag, data = data_test, seed = i)
+out_vus_form_MC <- lapply(seq_along(vus_null_data), function(i) {
+  null_sample <- vus_null_data[[i]]
+  data_test <- data.frame(biom = c(null_sample),
+                          diag = rep(c("1", "2", "3"), each = nrow(null_sample)))
+  out_vus_temp <- vus(formula = biom ~ diag, data = data_test, vus0 = 1 / 6,
+                      alternative = "greater", B = 500,
+                      seed = length(vus_null_data) + i)
   r_mean <- 1/mean(out_vus_temp$r.bts)
   ll_val_mean <- r_mean * out_vus_temp$ll.value
   ll_val_med <- out_vus_temp$ll.value * out_vus_temp$r.adj
-  signed_root_mean <- sign(out_vus_temp$estimate - 1/6) * sqrt(ll_val_mean)
+  signed_root_mean <- sign(out_vus_temp$estimate - 1/6) * sqrt(max(0, ll_val_mean))
   p_val_mean <- pnorm(signed_root_mean, lower.tail = FALSE)
   p_val_med <- out_vus_temp$p.value
   return(list(ll_val_mean = ll_val_mean, ll_val_med = ll_val_med, 
               p_val_mean = p_val_mean, p_val_med = p_val_med))
-}, n1 = 30, n2 = 30, n3 = 30, mu = mu_true, sigma = sigma_true)
+})
 ```
 
 
 ```{r, eval=FALSE}
-p_val_mean_form_MC <- sapply(1:5000, function(i) out_vus_form_MC[[i]]$p_val_mean)
+p_val_mean_form_MC <- vapply(out_vus_form_MC, `[[`, numeric(1), "p_val_mean")
 hist(p_val_mean_form_MC)
 ```
 
 ```{r, eval=FALSE}
-sapply(c(0.1, 0.05, 0.01), FUN = function(x) mean(p_val_mean_form_MC <= x))
+sapply(alpha_levels, function(x) mean(p_val_mean_form_MC <= x))
 ```
 
 ```{r, eval=FALSE}
-p_val_med_form_MC <- sapply(1:5000, function(i) out_vus_form_MC[[i]]$p_val_med)
+p_val_med_form_MC <- vapply(out_vus_form_MC, `[[`, numeric(1), "p_val_med")
 hist(p_val_med_form_MC)
 ```
 
 ```{r, eval=FALSE}
-sapply(c(0.1, 0.05, 0.01), FUN = function(x) mean(p_val_med_form_MC <= x))
+sapply(alpha_levels, function(x) mean(p_val_med_form_MC <= x))
 ```
 
 

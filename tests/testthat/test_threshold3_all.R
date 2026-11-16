@@ -90,3 +90,53 @@ test_that("formula all-method fits retain metadata in every result", {
     expect_identical(component$call, fit$call)
   }
 })
+
+test_that("CtP and MV optimise ordered thresholds on the original and bootstrap samples", {
+  # Scenario 6, RT bandwidths. Both legacy optimisers reversed this pair.
+  set.seed(130356L)
+  x <- rt(20L, 2)
+  y <- rbeta(20L, 2, 2)
+  z <- rchisq(20L, 1)
+  bounds <- rbind(c(min(x, y), min(y, z)), c(max(x, y), max(y, z)))
+  bwd <- vapply(list(x, y, z), bwd_plugin, numeric(1))
+  grid <- sort(unique(c(seq(min(bounds), max(bounds), length.out = 301L), bounds)))
+  a <- grid[grid >= bounds[1L, 1L] & grid <= bounds[2L, 1L]]
+  b <- grid[grid >= bounds[1L, 2L] & grid <= bounds[2L, 2L]]
+  feasible <- outer(a, b, "<=")
+
+  for (kernel in c("gauss", "epan")) {
+    fit <- threshold3(x, y, z, method = "all", kernel_type = kernel,
+                      bwd = bwd, B = 25L, seed = 81L)
+    F1 <- cdf_kernel(a, x, kernel, bwd[1L])
+    F2 <- outer(cdf_kernel(a, y, kernel, bwd[2L]),
+                cdf_kernel(b, y, kernel, bwd[2L]), function(u, v) v - u)
+    tcf3 <- rep(1 - cdf_kernel(b, z, kernel, bwd[3L]), each = length(a))
+    grid_ctp <- (1 - F1)^2 + (1 - F2)^2 + (1 - tcf3)^2
+    grid_mv <- F1 * F2 * tcf3
+    tcf <- as.matrix(fit$summary[, c("tcf1_opt", "tcf2_opt", "tcf3_opt")])
+    expect_lte(sum((1 - tcf[2L, ])^2), min(grid_ctp[feasible]) + 1e-6)
+    expect_gte(prod(tcf[3L, ]), max(grid_mv[feasible]) - 1e-6)
+
+    for (method in c("CtP", "MV")) {
+      component <- fit$results[[method]]
+      pairs <- cbind(component$opt_thresh, component$out_bts[1:2, ])
+      expect_true(all(pairs[1L, ] <= pairs[2L, ]))
+      expect_true(all(pairs >= bounds[1L, ] & pairs <= bounds[2L, ]))
+      expect_identical(component$coincident_thresholds_bts,
+                       pairs[1L, -1L] == pairs[2L, -1L])
+    }
+  }
+})
+
+test_that("CtP and MV can return coincident thresholds when the search bounds collapse", {
+  x <- rep(1, 4)
+  fit <- threshold3(x, x, x, method = "all", bwd = rep(1, 3), B = 3)
+  for (method in c("CtP", "MV")) {
+    component <- fit$results[[method]]
+    expect_equal(component$opt_thresh, c(1, 1))
+    expect_true(component$coincident_thresholds)
+    expect_true(all(component$coincident_thresholds_bts))
+    expect_equal(component$tcf2_opt, 0)
+    expect_true(is.finite(component$c_alp))
+  }
+})

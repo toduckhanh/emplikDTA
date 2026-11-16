@@ -21,6 +21,7 @@ threshold3(x, ...)
   B = 500,
   seed,
   plot = FALSE,
+  assessment = NULL,
   ...
 )
 
@@ -54,6 +55,12 @@ using shared bandwidths and, when requested, shared bootstrap samples.}
 \item{plot}{Add the joint EL region to an empirical ROC surface when
 \code{ci = TRUE}.}
 
+\item{assessment}{Optional named list with independent assessment vectors
+\code{x}, \code{y}, and \code{z}. When supplied with \code{ci = TRUE},
+inference uses these vectors at the thresholds selected from the original
+samples. The data used to plot the ROC surface and region are also taken
+from \code{assessment}. Bootstrap replicates hold the thresholds fixed.}
+
 \item{formula}{Formula \code{marker ~ group} with exactly three groups.}
 
 \item{data}{Data frame containing formula variables.}
@@ -69,9 +76,11 @@ For a single criterion, \code{threshold3} returns an object of class
 "threshold3" which is a list containing the following components:
 
 \item{opt_thresh}{Vector of two estimated optimal thresholds.}
+\item{coincident_thresholds}{Whether both thresholds coincide.}
 \item{tcf1_opt,tcf2_opt,tcf3_opt}{Kernel-based estimates of the three true
-class fractions at \code{opt_thresh}.}
-\item{n}{Named vector of original group sizes, \code{n1}, \code{n2},
+class fractions at \code{opt_thresh}, computed from the training data
+even when \code{assessment} is supplied.}
+\item{n}{Named vector of training group sizes, \code{n1}, \code{n2},
 and \code{n3}.}
 \item{call}{The matched call.}
 
@@ -79,10 +88,15 @@ When \code{ci = TRUE}, the object additionally contains:
 
 \item{out_bts}{A three-row bootstrap matrix containing two estimated
 thresholds and an EL statistic per replicate. Columns correspond to
-bootstrap replicates.}
-\item{c_alp}{Bootstrap-calibrated cutoff for the joint EL region.}
+bootstrap replicates. With \code{assessment}, the first two rows repeat
+the selected thresholds.}
+\item{coincident_thresholds_bts}{A logical vector marking bootstrap
+replicates with coincident thresholds, in the column order of \code{out_bts}.}
+\item{c_alp}{Bootstrap-calibrated cutoff for the joint EL region.
+A nonfinite cutoff indicates that the region could not be calibrated.}
 \item{ci_tau}{A two-by-two matrix with thresholds in rows and lower/upper
-bootstrap percentile confidence limits in columns.}
+bootstrap percentile confidence limits in columns, available when
+thresholds are re-estimated in the bootstrap.}
 
 For \code{method = "all"}, an object of class \code{"threshold3_all"}
 is returned. This is a list containing the following components:
@@ -91,8 +105,9 @@ is returned. This is a list containing the following components:
 \code{GYI}, \code{CtP}, and \code{MV}, each as described above.}
 \item{summary}{Data frame with one row per criterion and columns
 \code{method}, \code{tau1}, \code{tau2}, \code{tcf1_opt},
-\code{tcf2_opt}, and \code{tcf3_opt}. When \code{ci = TRUE}, it also
-contains \code{ci_tau1_lower}, \code{ci_tau1_upper},
+\code{tcf2_opt}, and \code{tcf3_opt}. With \code{ci = TRUE} and no
+\code{assessment}, it also contains
+\code{ci_tau1_lower}, \code{ci_tau1_upper},
 \code{ci_tau2_lower}, and \code{ci_tau2_upper}.}
 \item{method}{The value \code{"all"}.}
 \item{n}{Named vector of original group sizes.}
@@ -113,18 +128,69 @@ Estimate two thresholds for three independent ordered groups
 using kernel CDFs, optionally with bootstrap inference.
 }
 \details{
-At ordered thresholds a and b, the fractions are \eqn{F_1(a)},
-\eqn{F_2(b) - F_2(a)}, and \eqn{1 - F_3(b)}. Optimisation uses \code{L-BFGS-B} with bounds based on
-adjacent groups. Bootstrap resampling appends the original group extrema,
-keeps bandwidths fixed and re-estimates both thresholds. Threshold intervals
-use quantile type 8; the EL cutoff uses the default quantile type.
-For \code{method = "all"}, bandwidth selection and bootstrap resampling
-are performed once; each criterion then estimates its own thresholds,
-TCFs, confidence intervals and EL cutoff. Bootstrap samples are stored
-as lists, allowing unequal group sizes.
-The optimiser does not guarantee ordered returned
-thresholds; inspect \code{opt_thresh} before using the result.
+The rule assigns marker values at or below \eqn{a} to class 1,
+values in \eqn{(a,b]} to class 2, and values above \eqn{b} to class 3.
+The corresponding fractions are \eqn{F_1(a)}, \eqn{F_2(b) - F_2(a)},
+and \eqn{1 - F_3(b)}. All criteria enforce \eqn{a \le b} within
+search bounds based on adjacent groups. GYI refines detected peaks of
+the two CDF differences and matches each upper threshold to the best
+eligible lower threshold. CtP and MV search ordered grid pairs and
+refine the best pair with \code{L-BFGS-B} on a parameterization of
+the feasible set. All three searches also consider the diagonal
+\eqn{a = b}, where the middle-class fraction is zero.
+With \code{method = "all"}, the criteria share bandwidths and bootstrap
+draws, and each criterion has its own cutoff.
 }
+\section{Joint region on an independent assessment sample}{
+
+Use \code{assessment} to estimate the population TCFs of the selected
+classification rule on new observations. Conditional on the training
+data, the selected thresholds are fixed. Use the same marker scale and
+group order for the training and assessment samples. Assessment group
+sizes may differ from training group sizes.
+
+If \eqn{k_j} of the \eqn{n_j} assessment observations in class \eqn{j}
+are correctly classified, bootstrap counts are drawn from a binomial
+distribution with probability \eqn{k_j/n_j}. At zero or one, the
+generating probability is \eqn{(k_j + 0.5)/(n_j + 1)}. Each bootstrap
+statistic uses the generated counts and evaluates the deviance at the
+generating probabilities. The observed statistic uses the actual
+assessment counts. Coincident thresholds give a region on the plane
+\eqn{\mathrm{TCF}_2 = 0}, with the cutoff calibrated using the two outer
+groups. The fixed-threshold bootstrap provides a cutoff for the region.
+Percentile intervals for the thresholds are available in the refitting
+workflow described below.
+}
+
+\section{Joint region with bootstrap threshold refitting}{
+
+With \code{assessment = NULL}, the joint statistic uses the same data
+used for threshold selection. The bootstrap resamples within each
+training group, appends the original group extrema, and refits both
+thresholds using the original bandwidths. Each replicate evaluates the
+deviance at its refitted pair against the original kernel TCF estimates.
+A replicate with coincident thresholds contributes an infinite statistic
+if the original kernel estimate of TCF2 is positive. This can make the
+cutoff nonfinite. The marginal threshold intervals use quantile type 8.
+}
+
+\section{Evaluating and displaying the region}{
+
+The joint region contains the candidate triplets for which the sum of
+the class-specific binomial deviances is at most \code{c_alp}.
+Both bootstrap workflows use the default quantile type for the cutoff.
+The binomial deviance uses the limits at observed fractions of zero
+and one, and equals zero when an observed fraction and a candidate
+coincide at the same endpoint. A candidate of zero or one that
+contradicts the observed count gives infinite deviance.
+
+With \code{ci = TRUE} and \code{plot = TRUE}, the plot overlays the
+region boundary and empirical operating point on the ROC surface of
+the data used for inference. The axes are TCF1, TCF3, and TCF2.
+See \code{\link{CR_tcfs}} for the chi-squared calibration at fixed
+thresholds.
+}
+
 \examples{
 set.seed(21)
 x <- rnorm(40, 0, 1)
@@ -137,5 +203,12 @@ fit_all <- threshold3(rnorm(40), rnorm(50, 1), rnorm(60, 2),
                       method = "all", bwd = rep(0.4, 3), ci = FALSE)
 fit_all$summary
 fit_all$results$GYI$opt_thresh
+
+# Assess the selected rule on an independent sample.
+assessment <- list(x = rnorm(60), y = rnorm(60, 1), z = rnorm(60, 2))
+fit_assessment <- threshold3(x, y, z, method = "GYI",
+                             assessment = assessment, B = 100)
+fit_assessment$opt_thresh
+fit_assessment$c_alp
 
 }
