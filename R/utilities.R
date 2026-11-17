@@ -42,6 +42,18 @@ Fs <- function(x, t){
   }
 }
 
+## Binomial deviance and fixed-threshold bootstrap, shared by EL regions.
+.binomial_deviance <- function(p, q, n) {
+  stats::binomial()$dev.resids(p, q, n)
+}
+
+.bootstrap_binomial_deviance <- function(p, n, draws) {
+  boundary <- p %in% c(0, 1)
+  p <- (n * p + 0.5 * boundary) / (n + boundary)
+  counts <- qbinom(draws, n, p)
+  .binomial_deviance(counts / n, p, n)
+}
+
 ## function for checking the confidence level
 .check_ci <- function(ci_level) {
   if (!is.numeric(ci_level) || ci_level <= 0 || ci_level >= 1) {

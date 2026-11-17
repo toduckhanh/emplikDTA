@@ -205,7 +205,9 @@ plot.ROC_emp_curve <- function(x, color = "steelblue", linewidth = 1, ...) {
 #' @details Both branches currently use a chi-squared cutoff with two degrees
 #' of freedom. For the bootstrap-calibrated optimal-threshold region, use
 #' \code{plot} on the threshold2 fit. The cpt argument is ignored for optimal
-#' thresholds.
+#' thresholds. The statistic uses binomial deviance limits at empirical
+#' specificity or sensitivity of zero or one, including when a fixed threshold
+#' lies outside the observed range of a group.
 #' @param cpt a numeric value specifying the cut-point at which the operating
 #'   point and confidence region are computed.
 #' @param ci_level the confidence level of the confidence region.

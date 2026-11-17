@@ -2,10 +2,6 @@
 empi_llike_prepare <- function(x, y, tau,
                                type_F = c("empi", "Adi", "Adi_ties")) {
   type_F <- match.arg(type_F)
-  r1 <- range(x)
-  r2 <- range(y)
-  inside <- tau >= r1[1] && tau <= r1[2] && tau >= r2[1] && tau <= r2[2]
-  if (!inside) return(NULL)
   F1_tau <- switch(type_F,
                    empi = mean(x <= tau),
                    Adi = Fs(x, tau),
@@ -18,13 +14,14 @@ empi_llike_prepare <- function(x, y, tau,
 }
 
 empi_llike_2C <- function(obj, spe, sen) {
-  if(is.null(obj)) ll <- Inf
-  else {
-    ll1 <- 2 * obj$n1 * (obj$F1 * log(obj$F1 / spe) +
-                       (1 - obj$F1) * log((1 - obj$F1) / (1 - spe)))
-    ll2 <- 2 * obj$n2 * (obj$F2 * log(obj$F2 / (1 - sen)) +
-                       (1 - obj$F2) * log((1 - obj$F2) / sen))
-    ll <- ll1 + ll2
-  }
-  return(ll)
+  if (is.null(obj)) return(Inf)
+  ll1 <- .binomial_deviance(rep_len(obj$F1, length(spe)), spe, obj$n1)
+  ll2 <- .binomial_deviance(rep_len(1 - obj$F2, length(sen)), sen, obj$n2)
+  invalid <- spe < 0 | spe > 1 | sen < 0 | sen > 1
+  ifelse(invalid, Inf, ll1 + ll2)
+}
+
+bts_fixed_sen_spe <- function(obj, draws) {
+  .bootstrap_binomial_deviance(obj$F1, obj$n1, draws[, 1L]) +
+    .bootstrap_binomial_deviance(1 - obj$F2, obj$n2, draws[, 2L])
 }

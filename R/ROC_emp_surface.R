@@ -279,8 +279,8 @@ print.ROC_emp_surface <- function(x, ...) {
   tcf1 <- sort(unique(c(grid, obj$F1)))
   tcf3 <- sort(unique(c(grid, 1 - obj$F3)))
   if (isTRUE(obj$coincident)) {
-    surface <- outer(.tcf_deviance(rep(obj$F1, length(tcf1)), tcf1, obj$n1),
-                     .tcf_deviance(rep(1 - obj$F3, length(tcf3)), tcf3, obj$n3), "+")
+    surface <- outer(.binomial_deviance(rep(obj$F1, length(tcf1)), tcf1, obj$n1),
+                     .binomial_deviance(rep(1 - obj$F3, length(tcf3)), tcf3, obj$n3), "+")
     boundary <- grDevices::contourLines(tcf1, tcf3, surface, levels = cutoff)
     for (line in boundary) {
       rgl::lines3d(line$x, line$y, rep(0, length(line$x)), color = color,
