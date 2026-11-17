@@ -134,6 +134,11 @@ bts_opt_sen_spe <- function(data_bts, se_est, sp_est, h1, h2, a0, a1, a2,
 #'   estimation and plotting can also be performed separately using
 #'   \code{plot(result)}. For \code{method = "all"}, the default plot has
 #'   one panel per criterion.
+#' @param assessment Optional named list of independent marker vectors
+#'   \code{x} and \code{y}, in negative then positive group order.
+#'   When supplied with \code{ci = TRUE}, the selected threshold is held
+#'   fixed and the joint region is calibrated on these observations.
+#'   Use the same marker scale as the training data.
 #' @param formula A two-sided formula of the form \code{marker ~ group},
 #'   where \code{marker} is numeric and \code{group} identifies the two
 #'   reference classes.
@@ -179,7 +184,9 @@ bts_opt_sen_spe <- function(data_bts, se_est, sp_est, h1, h2, a0, a1, a2,
 #' }
 #' With \code{method = "all"}, bandwidth selection and bootstrap resampling
 #' are performed only once. The three criteria are fitted to the same original
-#' observations and the same bootstrap replicates. Each criterion retains
+#' observations. They share the resampled training data or, with
+#' \code{assessment}, the uniform draws used to generate binomial counts.
+#' Each criterion retains
 #' its own threshold, threshold interval and bootstrap EL cutoff. EL grid
 #' coordinates are constructed once; grid statistics are reused only when
 #' two fitted thresholds are exactly identical.
@@ -187,7 +194,7 @@ bts_opt_sen_spe <- function(data_bts, se_est, sp_est, h1, h2, a0, a1, a2,
 #' calibrated across criteria: each region has nominal level
 #' \code{ci_level} separately.
 #'
-#' When \code{ci = TRUE}, observations are resampled independently within
+#' When \code{ci = TRUE} and \code{assessment = NULL}, observations are resampled independently within
 #' each group. The original minimum and maximum of each group are appended
 #' to its resampled observations. The threshold is re-estimated in every
 #' replicate, keeping the original bandwidths and optimisation bounds fixed.
@@ -199,8 +206,21 @@ bts_opt_sen_spe <- function(data_bts, se_est, sp_est, h1, h2, a0, a1, a2,
 #' The bootstrap EL statistic is evaluated at the original kernel estimates
 #' of specificity and sensitivity, using each replicate's estimated threshold
 #' and empirical CDFs. Its \code{ci_level} quantile, computed using the default
-#' \code{quantile} type, is stored as \code{c_alp}. For the original samples,
-#' the empirical-CDF EL statistic at the estimated threshold is evaluated on
+#' \code{quantile} type, is stored as \code{c_alp}.
+#'
+#' With \code{assessment}, the selected threshold is kept fixed and the
+#' bootstrap draws binomial counts for the two groups. The generating
+#' probability is the empirical fraction of correct classifications,
+#' with \eqn{(k + 0.5)/(n + 1)} used when the observed count \eqn{k} is
+#' zero or \eqn{n}. Each bootstrap statistic evaluates the deviance at
+#' the generating probabilities. The cutoff is the \code{ci_level}
+#' quantile of these statistics.
+#'
+#' Both workflows use the binomial deviance limits at zero and one on
+#' the actual observed or simulated proportions. An observed fraction
+#' and a candidate at the same endpoint contribute zero. An incompatible
+#' candidate endpoint contributes infinite deviance. The statistic on the
+#' sample used for inference is evaluated at the estimated threshold on
 #' a \eqn{501 \times 501} grid over \eqn{[0,1]^2}. The contour
 #' \eqn{z = \mathrm{c\_alp}} gives the plotted joint confidence boundary.
 #' This is not a pair of separate marginal confidence intervals.
@@ -239,15 +259,17 @@ bts_opt_sen_spe <- function(data_bts, se_est, sp_est, h1, h2, a0, a1, a2,
 #' When \code{ci = TRUE}, the object additionally contains:
 #'
 #' \item{out_bts}{A two-row bootstrap matrix: row \code{tau} contains
-#' estimated thresholds and row \code{ll} contains EL statistics.
+#' the threshold used in each replicate and row \code{ll} contains EL statistics.
+#' With \code{assessment}, row \code{tau} is constant.
 #' Columns correspond to bootstrap replicates.}
 #' \item{c_alp}{Bootstrap-calibrated cutoff for the joint EL region.}
 #' \item{ci_tau}{Lower and upper bootstrap percentile confidence limits
-#' for the threshold.}
+#' for the threshold when it is re-estimated in the bootstrap.}
 #' \item{grid_sen_spe}{Data frame with columns \code{Spe}, \code{Sen},
 #' and \code{z}, containing grid coordinates and their EL statistics.}
 #' \item{spe_sen_emp}{Empirical specificity and sensitivity at the
-#' estimated threshold, with components \code{sp} and \code{se}.}
+#' estimated threshold on the sample used for inference, with components
+#' \code{sp} and \code{se}.}
 #'
 #' The formula method additionally returns:
 #'
@@ -264,7 +286,7 @@ bts_opt_sen_spe <- function(data_bts, se_est, sp_est, h1, h2, a0, a1, a2,
 #' \item{summary}{Three-row data frame with columns \code{method},
 #' \code{opt_thresh}, \code{spe_opt}, and \code{sen_opt}.
 #' Columns \code{ci_tau_lower} and \code{ci_tau_upper} are added when
-#' \code{ci = TRUE}.}
+#' \code{ci = TRUE} and \code{assessment = NULL}.}
 #' \item{method}{The value \code{"all"}.}
 #' \item{n,bwd,kernel_type,call,ci_level}{Shared metadata as described above.}
 #' \item{formula}{The supplied formula, for the formula interface only.}
@@ -317,6 +339,12 @@ bts_opt_sen_spe <- function(data_bts, se_est, sp_est, h1, h2, a0, a1, a2,
 #' plot(fits_el, method = "YI")  # Only the YI result
 #' plot(fits_el$results$CtP)     # A child fit behaves like any threshold2 object
 #' }
+#'
+#' # Assess a threshold on independent observations.
+#' assessment <- list(x = rnorm(70), y = rnorm(80, 1.5))
+#' fit_assessment <- threshold2(negative, positive, bwd = c(0.4, 0.4),
+#'                              assessment = assessment, B = 100)
+#' fit_assessment$c_alp
 #' @export
 threshold2 <- function(x, ...) {
   UseMethod("threshold2")
@@ -327,7 +355,8 @@ threshold2 <- function(x, ...) {
 threshold2.default <- function(x, y, method = c("YI", "CtP", "MA", "all"),
                                kernel_type = c("gauss", "epan"), bwd = NULL, 
                                bwd_type = c("RT", "AZZ", "CV"), ci = TRUE,
-                               ci_level = 0.95, B = 500, seed, plot = FALSE, ...) {
+                               ci_level = 0.95, B = 500, seed, plot = FALSE,
+                               assessment = NULL, ...) {
   rlang::check_dots_empty()
   call <- match.call()
   .check_numeric(x, "x")
@@ -337,6 +366,17 @@ threshold2.default <- function(x, y, method = c("YI", "CtP", "MA", "all"),
   bwd_type <- match.arg(bwd_type)
   if (!length(x) || !length(y) || any(!is.finite(x)) || any(!is.finite(y))) {
     stop("'x' and 'y' must contain finite observations.")
+  }
+  if (!is.null(assessment)) {
+    if (!is.list(assessment) || length(assessment) != 2L ||
+        !setequal(names(assessment), c("x", "y"))) {
+      stop("'assessment' must be a list with elements x and y.", call. = FALSE)
+    }
+    .check_numeric(assessment$x, "assessment$x")
+    .check_numeric(assessment$y, "assessment$y")
+    if (any(!is.finite(assessment$x)) || any(!is.finite(assessment$y))) {
+      stop("'assessment' must contain only finite values.", call. = FALSE)
+    }
   }
   if (!is.logical(ci) || length(ci) != 1L || is.na(ci) ||
       !is.logical(plot) || length(plot) != 1L || is.na(plot)) {
@@ -394,14 +434,16 @@ threshold2.default <- function(x, y, method = c("YI", "CtP", "MA", "all"),
   if(ci){
     if (missing(seed)) seed <- 34
     set.seed(seed)
-    data_bts <- lapply(seq_len(B), function(i){
-      x_b <- x[sample.int(n1, n1, replace = TRUE)]
-      y_b <- y[sample.int(n2, n2, replace = TRUE)]
-      x_b <- c(x_b, min(x), max(x))
-      y_b <- c(y_b, min(y), max(y))
-      # Lists support different sample sizes without data-frame recycling.
-      list(x = x_b, y = y_b)
-    })
+    if (is.null(assessment)) {
+      data_bts <- lapply(seq_len(B), function(i) {
+        list(x = c(x[sample.int(n1, n1, replace = TRUE)], range(x)),
+             y = c(y[sample.int(n2, n2, replace = TRUE)], range(y)))
+      })
+      region_data <- list(x = x, y = y)
+    } else {
+      draws <- matrix(runif(2 * B), nrow = B, ncol = 2L)
+      region_data <- assessment
+    }
     grid_coordinates <- expand.grid(
       Spe = seq(0, 1, length.out = 501),
       Sen = seq(0, 1, length.out = 501), KEEP.OUT.ATTRS = FALSE)
@@ -410,10 +452,19 @@ threshold2.default <- function(x, y, method = c("YI", "CtP", "MA", "all"),
     for (i in seq_along(methods)) {
       m <- methods[i]
       fit <- results[[m]]
-      fit$out_bts <- bts_opt_sen_spe(
-        data_bts = data_bts, se_est = fit$sen_opt, sp_est = fit$spe_opt,
-        h1 = bwd[1], h2 = bwd[2], a0 = a0, a1 = a1, a2 = a2,
-        type_ker = kernel_type, type_opt = m)
+      obj <- empi_llike_prepare(region_data$x, region_data$y, fit$opt_thresh)
+      if (is.null(assessment)) {
+        fit$out_bts <- bts_opt_sen_spe(
+          data_bts = data_bts, se_est = fit$sen_opt, sp_est = fit$spe_opt,
+          h1 = bwd[1], h2 = bwd[2], a0 = a0, a1 = a1, a2 = a2,
+          type_ker = kernel_type, type_opt = m)
+        fit$ci_tau <- quantile(fit$out_bts["tau", ],
+                               probs = (1 + c(-1, 1)*ci_level)/2,
+                               type = 8, names = FALSE)
+      } else {
+        fit$out_bts <- rbind(tau = rep(unname(fit$opt_thresh), B),
+                             ll = bts_fixed_sen_spe(obj, draws))
+      }
       if (any(!is.finite(fit$out_bts["tau", ])) ||
           anyNA(fit$out_bts["ll", ])) {
         stop(sprintf("Invalid bootstrap results for method '%s'.", m))
@@ -423,22 +474,17 @@ threshold2.default <- function(x, y, method = c("YI", "CtP", "MA", "all"),
       if (!is.finite(fit$c_alp)) {
         stop(sprintf("The bootstrap EL cutoff is not finite for method '%s'.", m))
       }
-      fit$ci_tau <- quantile(fit$out_bts["tau", ],
-                             probs = (1 + c(-1, 1)*ci_level)/2,
-                             type = 8, names = FALSE)
-      # Identical thresholds have identical original-sample EL grids;
+      # Identical thresholds have identical EL grids on the inference data;
       # bootstrap cutoffs remain separately calibrated for each criterion.
       previous <- match(fitted_thresholds[i], fitted_thresholds)
       if (previous < i) {
         fit$grid_sen_spe <- results[[previous]]$grid_sen_spe
         fit$spe_sen_emp <- results[[previous]]$spe_sen_emp
       } else {
-        obj <- empi_llike_prepare(x = x, y = y, tau = fit$opt_thresh,
-                                  type_F = "empi")
         fit$grid_sen_spe <- grid_coordinates
         fit$grid_sen_spe$z <- empi_llike_2C(
           obj, spe = grid_coordinates$Spe, sen = grid_coordinates$Sen)
-        fit$spe_sen_emp <- sp_se_emp(x = x, y = y, tau = fit$opt_thresh)
+        fit$spe_sen_emp <- sp_se_emp(region_data$x, region_data$y, fit$opt_thresh)
       }
       results[[m]] <- fit
     }
@@ -453,7 +499,7 @@ threshold2.default <- function(x, y, method = c("YI", "CtP", "MA", "all"),
       row <- data.frame(method = m, opt_thresh = unname(fit$opt_thresh),
                          spe_opt = unname(fit$spe_opt),
                          sen_opt = unname(fit$sen_opt))
-      if (ci) {
+      if (!is.null(fit$ci_tau)) {
         row$ci_tau_lower <- fit$ci_tau[1]
         row$ci_tau_upper <- fit$ci_tau[2]
       }

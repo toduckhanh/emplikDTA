@@ -20,6 +20,7 @@ threshold2(x, ...)
   B = 500,
   seed,
   plot = FALSE,
+  assessment = NULL,
   ...
 )
 
@@ -75,6 +76,12 @@ estimation and plotting can also be performed separately using
 \code{plot(result)}. For \code{method = "all"}, the default plot has
 one panel per criterion.}
 
+\item{assessment}{Optional named list of independent marker vectors
+\code{x} and \code{y}, in negative then positive group order.
+When supplied with \code{ci = TRUE}, the selected threshold is held
+fixed and the joint region is calibrated on these observations.
+Use the same marker scale as the training data.}
+
 \item{formula}{A two-sided formula of the form \code{marker ~ group},
 where \code{marker} is numeric and \code{group} identifies the two
 reference classes.}
@@ -112,15 +119,17 @@ computed, or \code{NULL} otherwise.}
 When \code{ci = TRUE}, the object additionally contains:
 
 \item{out_bts}{A two-row bootstrap matrix: row \code{tau} contains
-estimated thresholds and row \code{ll} contains EL statistics.
+the threshold used in each replicate and row \code{ll} contains EL statistics.
+With \code{assessment}, row \code{tau} is constant.
 Columns correspond to bootstrap replicates.}
 \item{c_alp}{Bootstrap-calibrated cutoff for the joint EL region.}
 \item{ci_tau}{Lower and upper bootstrap percentile confidence limits
-for the threshold.}
+for the threshold when it is re-estimated in the bootstrap.}
 \item{grid_sen_spe}{Data frame with columns \code{Spe}, \code{Sen},
 and \code{z}, containing grid coordinates and their EL statistics.}
 \item{spe_sen_emp}{Empirical specificity and sensitivity at the
-estimated threshold, with components \code{sp} and \code{se}.}
+estimated threshold on the sample used for inference, with components
+\code{sp} and \code{se}.}
 
 The formula method additionally returns:
 
@@ -137,7 +146,7 @@ is returned. This is a list containing the following components:
 \item{summary}{Three-row data frame with columns \code{method},
 \code{opt_thresh}, \code{spe_opt}, and \code{sen_opt}.
 Columns \code{ci_tau_lower} and \code{ci_tau_upper} are added when
-\code{ci = TRUE}.}
+\code{ci = TRUE} and \code{assessment = NULL}.}
 \item{method}{The value \code{"all"}.}
 \item{n,bwd,kernel_type,call,ci_level}{Shared metadata as described above.}
 \item{formula}{The supplied formula, for the formula interface only.}
@@ -182,7 +191,9 @@ The available criteria are:
 }
 With \code{method = "all"}, bandwidth selection and bootstrap resampling
 are performed only once. The three criteria are fitted to the same original
-observations and the same bootstrap replicates. Each criterion retains
+observations. They share the resampled training data or, with
+\code{assessment}, the uniform draws used to generate binomial counts.
+Each criterion retains
 its own threshold, threshold interval and bootstrap EL cutoff. EL grid
 coordinates are constructed once; grid statistics are reused only when
 two fitted thresholds are exactly identical.
@@ -190,7 +201,7 @@ Shared resamples do not make the three confidence regions jointly
 calibrated across criteria: each region has nominal level
 \code{ci_level} separately.
 
-When \code{ci = TRUE}, observations are resampled independently within
+When \code{ci = TRUE} and \code{assessment = NULL}, observations are resampled independently within
 each group. The original minimum and maximum of each group are appended
 to its resampled observations. The threshold is re-estimated in every
 replicate, keeping the original bandwidths and optimisation bounds fixed.
@@ -202,8 +213,21 @@ This interval is a bootstrap percentile interval, not an EL interval.
 The bootstrap EL statistic is evaluated at the original kernel estimates
 of specificity and sensitivity, using each replicate's estimated threshold
 and empirical CDFs. Its \code{ci_level} quantile, computed using the default
-\code{quantile} type, is stored as \code{c_alp}. For the original samples,
-the empirical-CDF EL statistic at the estimated threshold is evaluated on
+\code{quantile} type, is stored as \code{c_alp}.
+
+With \code{assessment}, the selected threshold is kept fixed and the
+bootstrap draws binomial counts for the two groups. The generating
+probability is the empirical fraction of correct classifications,
+with \eqn{(k + 0.5)/(n + 1)} used when the observed count \eqn{k} is
+zero or \eqn{n}. Each bootstrap statistic evaluates the deviance at
+the generating probabilities. The cutoff is the \code{ci_level}
+quantile of these statistics.
+
+Both workflows use the binomial deviance limits at zero and one on
+the actual observed or simulated proportions. An observed fraction
+and a candidate at the same endpoint contribute zero. An incompatible
+candidate endpoint contributes infinite deviance. The statistic on the
+sample used for inference is evaluated at the estimated threshold on
 a \eqn{501 \times 501} grid over \eqn{[0,1]^2}. The contour
 \eqn{z = \mathrm{c\_alp}} gives the plotted joint confidence boundary.
 This is not a pair of separate marginal confidence intervals.
@@ -269,6 +293,12 @@ plot(fits_el)                 # One panel per criterion
 plot(fits_el, method = "YI")  # Only the YI result
 plot(fits_el$results$CtP)     # A child fit behaves like any threshold2 object
 }
+
+# Assess a threshold on independent observations.
+assessment <- list(x = rnorm(70), y = rnorm(80, 1.5))
+fit_assessment <- threshold2(negative, positive, bwd = c(0.4, 0.4),
+                             assessment = assessment, B = 100)
+fit_assessment$c_alp
 }
 \seealso{
 \code{\link{plot.threshold2}}

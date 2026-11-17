@@ -20,27 +20,26 @@ empi_llike_proj(
 
 \item{n1, n2}{Sample sizes associated with X1 and X2.}
 
-\item{tcf1, tcf2}{Proposed probabilities P(X1 <= tau) and P(X2 > tau).
-Use interior probabilities for finite calculations.}
+\item{tcf1, tcf2}{Proposed probabilities P(X1 <= tau) and P(X2 > tau).}
 
-\item{tau}{Single threshold in the overlap of the observed group ranges.}
+\item{tau}{Single threshold on the marker scale.}
 
 \item{type_F}{CDF estimator: "empi" uses empirical proportions;
-"Adi_ties" uses the interpolated tie-aware CDF. "Adi" requires an Fs
-helper that is not currently defined in the package and is unsupported.}
+"Adi_ties" uses the interpolated tie-aware CDF and "Adi" interpolates
+between order statistics for untied data.}
 }
 \value{
-Numeric likelihood statistic, Inf outside overlapping ranges,
-or NaN for undefined boundary arithmetic.
+Numeric likelihood statistic.
 }
 \description{
 Low-level calculation of a two-sample minus twice log
 empirical likelihood ratio at a fixed threshold.
 }
 \details{
-This helper does not validate sample sizes or handle zero log
-terms by limits. Boundary probabilities can produce NaN. Prefer the
-high-level inference functions for ordinary analyses.
+The binomial deviance uses limits at zero and one. A candidate
+endpoint incompatible with the observed proportion contributes infinity.
+With empirical proportions a threshold outside either group's observed
+range gives a boundary proportion.
 }
 \examples{
 empi_llike_proj(1:5, 2:6, 5, 5, tcf1 = 0.5, tcf2 = 0.5, tau = 3)
